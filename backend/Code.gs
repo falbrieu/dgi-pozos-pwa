@@ -24,8 +24,6 @@ function doPost(e) {
         response = handleCheckSession(body.sessionToken);
       } else if (body.action === 'getProfile') {
         response = handleGetProfile(body.sessionToken, body.wellId);
-      } else if (body.action === 'getDownloadTicket') {
-        response = handleGetDownloadTicket(body.sessionToken, body.wellId);
       } else {
         response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: 'accion desconocida: ' + body.action };
       }
@@ -157,100 +155,12 @@ function handleGetProfile(sessionToken, wellId) {
   };
 }
 
-// --- Prueba alternativa de entrega: ticket firmado + doGet + Blob directo ---
-// Objetivo: comparar contra base64-en-JSON. No reemplaza todavia el flujo
-// getProfile existente, corre en paralelo para poder medir ambos.
-
-function doGet(e) {
-  var action = e && e.parameter ? e.parameter.action : null;
-  if (action === 'downloadImage') {
-    return handleDownloadImage(e.parameter.ticket);
-  }
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'error', code: 'SERVICE_UNAVAILABLE', message: 'accion desconocida' }))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-function handleGetDownloadTicket(sessionToken, wellId) {
-  var session = verifySessionToken(sessionToken);
-  if (!session.valid) {
-    return { status: 'error', code: 'UNAUTHORIZED', message: 'sessionToken invalido: ' + session.reason };
-  }
-  if (!wellId || !/^\d{2}-\d{4}$/.test(wellId)) {
-    return { status: 'error', code: 'INVALID_WELL_ID', message: 'formato invalido: ' + wellId };
-  }
-
-  var now = Math.floor(Date.now() / 1000);
-  var payload = JSON.stringify({ wellId: wellId, email: session.email, exp: now + 120 });
-  var payloadB64 = Utilities.base64EncodeWebSafe(payload);
-  var ticket = payloadB64 + '.' + signPayload(payloadB64);
-
-  return {
-    status: 'ok',
-    data: {
-      ticket: ticket,
-      imageUrl: ScriptApp.getService().getUrl() + '?action=downloadImage&ticket=' + encodeURIComponent(ticket)
-    }
-  };
-}
-
-function verifyDownloadTicket(ticket) {
-  if (!ticket || ticket.indexOf('.') === -1) {
-    return { valid: false, reason: 'formato invalido' };
-  }
-  var parts = ticket.split('.');
-  if (parts.length !== 2) {
-    return { valid: false, reason: 'formato invalido' };
-  }
-  var payloadB64 = parts[0];
-  var signature = parts[1];
-
-  if (signPayload(payloadB64) !== signature) {
-    return { valid: false, reason: 'firma invalida' };
-  }
-
-  var payload;
-  try {
-    payload = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadB64)).getDataAsString());
-  } catch (err) {
-    return { valid: false, reason: 'payload corrupto' };
-  }
-
-  var now = Math.floor(Date.now() / 1000);
-  if (!payload.exp || now > payload.exp) {
-    return { valid: false, reason: 'expirado' };
-  }
-
-  return { valid: true, wellId: payload.wellId, email: payload.email };
-}
-
-function handleDownloadImage(ticket) {
-  var verified = verifyDownloadTicket(ticket);
-  if (!verified.valid) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'ticket invalido: ' + verified.reason }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  var profile;
-  try {
-    profile = profileService_getProfile(verified.wellId);
-  } catch (err) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', code: 'SERVICE_UNAVAILABLE', debug: String(err) }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  if (!profile.found) {
-    return ContentService
-      .createTextOutput(JSON.stringify({ status: 'error', code: 'PROFILE_NOT_FOUND' }))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-
-  // Esto es justamente lo que hay que confirmar que funciona: devolver el
-  // Blob directo desde doGet, sin pasar por ContentService/JSON/base64.
-  return profile.blob;
-}
+// NOTA: se probo y se descarto un mecanismo de "ticket firmado + doGet +
+// Blob directo" para evitar base64. Se elimino del codigo porque Apps
+// Script Web Apps solo puede devolver HtmlOutput o TextOutput desde
+// doGet/doPost (documentado por Google) - no existe forma soportada de
+// devolver un Blob binario como respuesta HTTP. Detalle y alternativas
+// evaluadas en docs/architecture.md.
 
 // ProfileService: logica de negocio pura. No sabe si el resultado se va a
 // mandar como base64, como link, o de cualquier otra forma - eso lo decide

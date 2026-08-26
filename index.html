@@ -24,8 +24,7 @@
 
   <div id="bloqueProfile" style="display:none; margin-top:1em;">
     <input id="inputWellId" type="text" placeholder="03-0123" />
-    <button id="btnGetProfile">Buscar perfil (V0, base64)</button>
-    <button id="btnGetProfileTicket">Buscar perfil (V0, ticket+doGet)</button>
+    <button id="btnGetProfile">Buscar perfil (V0)</button>
     <pre id="resultadoProfile"></pre>
     <img id="imagenProfile" style="max-width:100%; display:none;" />
   </div>
@@ -164,58 +163,6 @@
     }
 
     document.getElementById('btnGetProfile').addEventListener('click', getProfile);
-
-    async function getProfileViaTicket() {
-      const sessionToken = localStorage.getItem('sessionToken');
-      const wellId = document.getElementById('inputWellId').value.trim();
-      const resultadoEl = document.getElementById('resultadoProfile');
-      const imgEl = document.getElementById('imagenProfile');
-      imgEl.style.display = 'none';
-      resultadoEl.textContent = 'Pidiendo ticket para ' + wellId + '...';
-
-      const clientStart = performance.now();
-      try {
-        const backendResponse = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'getDownloadTicket', sessionToken: sessionToken, wellId: wellId })
-        });
-        const result = await backendResponse.json();
-        const ticketElapsedMs = Math.round(performance.now() - clientStart);
-
-        if (result.status !== 'ok') {
-          resultadoEl.textContent =
-            'Error pidiendo ticket\n' + 'code: ' + result.code + (result.message ? '\n' + result.message : '');
-          return;
-        }
-
-        resultadoEl.textContent =
-          'Ticket obtenido en ' + ticketElapsedMs + ' ms. Cargando imagen via doGet+Blob...';
-
-        const imageStart = performance.now();
-        imgEl.onload = function () {
-          const imageElapsedMs = Math.round(performance.now() - imageStart);
-          const totalElapsedMs = Math.round(performance.now() - clientStart);
-          resultadoEl.textContent =
-            'OK (ticket + doGet + Blob)\n' +
-            'wellId: ' + wellId + '\n' +
-            'tiempo pedir ticket: ' + ticketElapsedMs + ' ms\n' +
-            'tiempo cargar imagen (doGet): ' + imageElapsedMs + ' ms\n' +
-            'tiempo total: ' + totalElapsedMs + ' ms';
-          imgEl.style.display = 'block';
-        };
-        imgEl.onerror = function () {
-          resultadoEl.textContent =
-            'Error cargando la imagen desde doGet (revisar si el Blob se sirvio bien). ' +
-            'Ticket tardo ' + ticketElapsedMs + ' ms.';
-        };
-        imgEl.src = result.data.imageUrl;
-      } catch (err) {
-        resultadoEl.textContent = 'Error de red: ' + err.toString();
-      }
-    }
-
-    document.getElementById('btnGetProfileTicket').addEventListener('click', getProfileViaTicket);
   </script>
 </body>
 </html>
