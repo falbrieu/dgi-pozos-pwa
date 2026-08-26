@@ -20,16 +20,28 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    function handleCredentialResponse(response) {
-      // Esto SOLO decodifica el token en el navegador para verificar visualmente
-      // que Google Sign-In funciona en este dispositivo. No es una validación real:
-      // la validación de verdad ocurre en el backend (Apps Script), en el próximo paso.
+    const APPS_SCRIPT_URL = 'REEMPLAZAR_CON_APPS_SCRIPT_EXEC_URL';
+
+    async function handleCredentialResponse(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
       document.getElementById('resultado').textContent =
-        'Login OK (sin validar aún en backend)\n' +
+        'Login en el navegador OK (sin validar aún)\n' +
         'email: ' + payload.email + '\n' +
-        'nombre: ' + payload.name + '\n' +
-        'exp: ' + new Date(payload.exp * 1000).toLocaleString();
+        'Validando contra el backend...';
+
+      try {
+        const backendResponse = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'login', idToken: response.credential })
+        });
+        const result = await backendResponse.json();
+        document.getElementById('resultado').textContent =
+          'Respuesta del backend (Apps Script):\n' + JSON.stringify(result, null, 2);
+      } catch (err) {
+        document.getElementById('resultado').textContent =
+          'Error llamando al backend: ' + err.toString();
+      }
     }
   </script>
 </body>
