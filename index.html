@@ -12,17 +12,20 @@
 
   <div id="g_id_onload"
        data-client_id="970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com"
-       data-callback="handleCredentialResponse">
+       data-callback="handleCredentialResponse"
+       data-auto_select="true">
   </div>
   <div class="g_id_signin" data-type="standard"></div>
 
+  <pre id="diagnosticoInicio">Verificando sesión guardada...</pre>
   <pre id="resultado">Todavía no iniciaste sesión.</pre>
 
   <button id="btnCheckSession" style="display:none">Probar sessionToken guardado (segunda llamada)</button>
 
   <div id="bloqueProfile" style="display:none; margin-top:1em;">
     <input id="inputWellId" type="text" placeholder="03-0123" />
-    <button id="btnGetProfile">Buscar perfil (V0)</button>
+    <button id="btnGetProfile">Buscar perfil (V0, base64)</button>
+    <button id="btnGetProfileTicket">Buscar perfil (V0, ticket+doGet)</button>
     <pre id="resultadoProfile"></pre>
     <img id="imagenProfile" style="max-width:100%; display:none;" />
   </div>
@@ -59,16 +62,23 @@
       }
     }
 
+    // Devuelve el resultado crudo de checkSession contra un token dado, sin
+    // tocar el DOM - asi se puede reusar tanto desde el boton manual como
+    // desde la verificacion automatica al cargar la pagina.
+    async function callCheckSession(sessionToken) {
+      const backendResponse = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'checkSession', sessionToken: sessionToken })
+      });
+      return backendResponse.json();
+    }
+
     async function checkSession() {
       const sessionToken = localStorage.getItem('sessionToken');
       document.getElementById('resultado').textContent = 'Probando sessionToken guardado en localStorage...';
       try {
-        const backendResponse = await fetch(APPS_SCRIPT_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'checkSession', sessionToken: sessionToken })
-        });
-        const result = await backendResponse.json();
+        const result = await callCheckSession(sessionToken);
         document.getElementById('resultado').textContent =
           'Respuesta de checkSession:\n' + JSON.stringify(result, null, 2);
       } catch (err) {
@@ -77,6 +87,41 @@
     }
 
     document.getElementById('btnCheckSession').addEventListener('click', checkSession);
+
+    // Instrumentacion temporal (V0/debug): distinguir "token ausente" de
+    // "token presente pero invalido/expirado", y si es valido, reusarlo sin
+    // pedir login de nuevo. Esto reemplaza el comportamiento anterior, que
+    // nunca miraba localStorage al cargar la pagina.
+    async function verificarSesionAlCargar() {
+      const diagEl = document.getElementById('diagnosticoInicio');
+      const sessionToken = localStorage.getItem('sessionToken');
+
+      if (!sessionToken) {
+        diagEl.textContent = 'Diagnostico al cargar: NO hay sessionToken en localStorage (token ausente).';
+        return;
+      }
+
+      diagEl.textContent = 'Diagnostico al cargar: hay un sessionToken en localStorage, verificando con el backend...';
+      try {
+        const result = await callCheckSession(sessionToken);
+        if (result.status === 'ok') {
+          diagEl.textContent =
+            'Diagnostico al cargar: sessionToken presente y VALIDO (email: ' + result.data.email + '). ' +
+            'Se reusa la sesion, no hace falta loguearse de nuevo.';
+          document.getElementById('resultado').textContent = 'Sesion recuperada automaticamente: ' + result.data.email;
+          document.getElementById('btnCheckSession').style.display = 'inline-block';
+          document.getElementById('bloqueProfile').style.display = 'block';
+        } else {
+          diagEl.textContent =
+            'Diagnostico al cargar: sessionToken presente pero INVALIDO. Motivo: ' + result.message;
+          localStorage.removeItem('sessionToken');
+        }
+      } catch (err) {
+        diagEl.textContent = 'Diagnostico al cargar: error verificando el token: ' + err.toString();
+      }
+    }
+
+    verificarSesionAlCargar();
 
     async function getProfile() {
       const sessionToken = localStorage.getItem('sessionToken');
@@ -119,6 +164,58 @@
     }
 
     document.getElementById('btnGetProfile').addEventListener('click', getProfile);
+
+    async function getProfileViaTicket() {
+      const sessionToken = localStorage.getItem('sessionToken');
+      const wellId = document.getElementById('inputWellId').value.trim();
+      const resultadoEl = document.getElementById('resultadoProfile');
+      const imgEl = document.getElementById('imagenProfile');
+      imgEl.style.display = 'none';
+      resultadoEl.textContent = 'Pidiendo ticket para ' + wellId + '...';
+
+      const clientStart = performance.now();
+      try {
+        const backendResponse = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'getDownloadTicket', sessionToken: sessionToken, wellId: wellId })
+        });
+        const result = await backendResponse.json();
+        const ticketElapsedMs = Math.round(performance.now() - clientStart);
+
+        if (result.status !== 'ok') {
+          resultadoEl.textContent =
+            'Error pidiendo ticket\n' + 'code: ' + result.code + (result.message ? '\n' + result.message : '');
+          return;
+        }
+
+        resultadoEl.textContent =
+          'Ticket obtenido en ' + ticketElapsedMs + ' ms. Cargando imagen via doGet+Blob...';
+
+        const imageStart = performance.now();
+        imgEl.onload = function () {
+          const imageElapsedMs = Math.round(performance.now() - imageStart);
+          const totalElapsedMs = Math.round(performance.now() - clientStart);
+          resultadoEl.textContent =
+            'OK (ticket + doGet + Blob)\n' +
+            'wellId: ' + wellId + '\n' +
+            'tiempo pedir ticket: ' + ticketElapsedMs + ' ms\n' +
+            'tiempo cargar imagen (doGet): ' + imageElapsedMs + ' ms\n' +
+            'tiempo total: ' + totalElapsedMs + ' ms';
+          imgEl.style.display = 'block';
+        };
+        imgEl.onerror = function () {
+          resultadoEl.textContent =
+            'Error cargando la imagen desde doGet (revisar si el Blob se sirvio bien). ' +
+            'Ticket tardo ' + ticketElapsedMs + ' ms.';
+        };
+        imgEl.src = result.data.imageUrl;
+      } catch (err) {
+        resultadoEl.textContent = 'Error de red: ' + err.toString();
+      }
+    }
+
+    document.getElementById('btnGetProfileTicket').addEventListener('click', getProfileViaTicket);
   </script>
 </body>
 </html>
