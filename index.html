@@ -20,7 +20,7 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    const APPS_SCRIPT_URL = 'REEMPLAZAR_CON_APPS_SCRIPT_EXEC_URL';
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_fttbCjlZaE7qjhZipqRxvLtdXZV1kCaEjyOeK8UZEJy9VgC5LmAGiyUtVeUZRq1Z/exec';
 
     async function handleCredentialResponse(response) {
       const payload = JSON.parse(atob(response.credential.split('.')[1]));
