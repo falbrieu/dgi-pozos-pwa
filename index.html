@@ -18,6 +18,8 @@
 
   <pre id="resultado">Todavía no iniciaste sesión.</pre>
 
+  <button id="btnCheckSession" style="display:none">Probar sessionToken guardado (segunda llamada)</button>
+
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_fttbCjlZaE7qjhZipqRxvLtdXZV1kCaEjyOeK8UZEJy9VgC5LmAGiyUtVeUZRq1Z/exec';
@@ -38,11 +40,35 @@
         const result = await backendResponse.json();
         document.getElementById('resultado').textContent =
           'Respuesta del backend (Apps Script):\n' + JSON.stringify(result, null, 2);
+
+        if (result.status === 'ok' && result.data && result.data.sessionToken) {
+          localStorage.setItem('sessionToken', result.data.sessionToken);
+          document.getElementById('btnCheckSession').style.display = 'inline-block';
+        }
       } catch (err) {
         document.getElementById('resultado').textContent =
           'Error llamando al backend: ' + err.toString();
       }
     }
+
+    async function checkSession() {
+      const sessionToken = localStorage.getItem('sessionToken');
+      document.getElementById('resultado').textContent = 'Probando sessionToken guardado en localStorage...';
+      try {
+        const backendResponse = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'checkSession', sessionToken: sessionToken })
+        });
+        const result = await backendResponse.json();
+        document.getElementById('resultado').textContent =
+          'Respuesta de checkSession:\n' + JSON.stringify(result, null, 2);
+      } catch (err) {
+        document.getElementById('resultado').textContent = 'Error: ' + err.toString();
+      }
+    }
+
+    document.getElementById('btnCheckSession').addEventListener('click', checkSession);
   </script>
 </body>
 </html>

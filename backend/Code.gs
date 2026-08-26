@@ -1,9 +1,15 @@
 // V0 - prueba tecnica minima. Descartable: NO es la arquitectura en capas de V1.
 // Unico proposito: verificar que un POST cross-origin desde GitHub Pages llega
-// intacto a Apps Script, y que se puede validar un ID token de Google contra
-// el endpoint tokeninfo de Google, sin tocar Drive, Sheets, sesion propia ni historial.
+// intacto a Apps Script, que se puede validar un ID token de Google contra
+// tokeninfo, y que a partir de ahi se puede emitir y validar una sesion propia
+// (HMAC) sin volver a llamar a Google en cada request. Todavia sin Drive,
+// Sheets, historial ni rate limiting.
 
 var GOOGLE_CLIENT_ID = '970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com';
+
+// V0 lo dejamos corto (60s) a proposito, para poder probar la expiracion sin
+// esperar horas. En V1 esto sube a algo como 12 horas.
+var SESSION_TTL_SECONDS = 60;
 
 function doPost(e) {
   var response;
@@ -14,6 +20,8 @@ function doPost(e) {
       var body = JSON.parse(e.postData.contents);
       if (body.action === 'login') {
         response = handleLogin(body.idToken);
+      } else if (body.action === 'checkSession') {
+        response = handleCheckSession(body.sessionToken);
       } else {
         response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: 'accion desconocida: ' + body.action };
       }
@@ -25,6 +33,81 @@ function doPost(e) {
   return ContentService
     .createTextOutput(JSON.stringify(response))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// Correr esta funcion UNA VEZ manualmente desde el editor de Apps Script
+// (Ejecutar > setupSessionSecret) para generar y guardar el secreto HMAC.
+// No sobreescribe un secreto ya existente.
+function setupSessionSecret() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('SESSION_SECRET')) {
+    Logger.log('SESSION_SECRET ya existe, no se modifico.');
+    return;
+  }
+  var secret = Utilities.getUuid() + Utilities.getUuid();
+  props.setProperty('SESSION_SECRET', secret);
+  Logger.log('SESSION_SECRET generado y guardado en Script Properties.');
+}
+
+function getSessionSecret() {
+  var secret = PropertiesService.getScriptProperties().getProperty('SESSION_SECRET');
+  if (!secret) {
+    throw new Error('SESSION_SECRET no configurado. Corre setupSessionSecret() primero.');
+  }
+  return secret;
+}
+
+function signPayload(payloadB64) {
+  var rawSignature = Utilities.computeHmacSha256Signature(payloadB64, getSessionSecret());
+  return Utilities.base64EncodeWebSafe(rawSignature);
+}
+
+function createSessionToken(email) {
+  var now = Math.floor(Date.now() / 1000);
+  var payload = JSON.stringify({ email: email, iat: now, exp: now + SESSION_TTL_SECONDS });
+  var payloadB64 = Utilities.base64EncodeWebSafe(payload);
+  return payloadB64 + '.' + signPayload(payloadB64);
+}
+
+function verifySessionToken(token) {
+  if (!token || token.indexOf('.') === -1) {
+    return { valid: false, reason: 'formato invalido' };
+  }
+  var parts = token.split('.');
+  if (parts.length !== 2) {
+    return { valid: false, reason: 'formato invalido' };
+  }
+  var payloadB64 = parts[0];
+  var signature = parts[1];
+
+  if (signPayload(payloadB64) !== signature) {
+    return { valid: false, reason: 'firma invalida' };
+  }
+
+  var payload;
+  try {
+    payload = JSON.parse(Utilities.newBlob(Utilities.base64DecodeWebSafe(payloadB64)).getDataAsString());
+  } catch (err) {
+    return { valid: false, reason: 'payload corrupto' };
+  }
+
+  var now = Math.floor(Date.now() / 1000);
+  if (!payload.exp || now > payload.exp) {
+    return { valid: false, reason: 'expirado' };
+  }
+
+  return { valid: true, email: payload.email };
+}
+
+function handleCheckSession(sessionToken) {
+  var result = verifySessionToken(sessionToken);
+  if (!result.valid) {
+    return { status: 'error', code: 'UNAUTHORIZED', message: 'sessionToken invalido: ' + result.reason };
+  }
+  return {
+    status: 'ok',
+    data: { email: result.email, message: 'sesion validada localmente, sin llamar a Google' }
+  };
 }
 
 function handleLogin(idToken) {
@@ -55,7 +138,8 @@ function handleLogin(idToken) {
     data: {
       email: tokenInfo.email,
       name: tokenInfo.name || null,
-      emailVerified: tokenInfo.email_verified === 'true' || tokenInfo.email_verified === true
+      emailVerified: tokenInfo.email_verified === 'true' || tokenInfo.email_verified === true,
+      sessionToken: createSessionToken(tokenInfo.email)
     }
   };
 }
