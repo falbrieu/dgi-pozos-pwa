@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ITF Irrigación — V0</title>
+</head>
+<body>
+  <h1>V0 — Prueba técnica</h1>
+  <p>Paso 1-2: GitHub Pages sirviendo esta página + Google Sign-In.</p>
+
+  <div id="g_id_onload"
+       data-client_id="REEMPLAZAR_CON_CLIENT_ID_DE_GOOGLE_CLOUD"
+       data-callback="handleCredentialResponse">
+  </div>
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <pre id="resultado">Todavía no iniciaste sesión.</pre>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    function handleCredentialResponse(response) {
+      // Esto SOLO decodifica el token en el navegador para verificar visualmente
+      // que Google Sign-In funciona en este dispositivo. No es una validación real:
+      // la validación de verdad ocurre en el backend (Apps Script), en el próximo paso.
+      const payload = JSON.parse(atob(response.credential.split('.')[1]));
+      document.getElementById('resultado').textContent =
+        'Login OK (sin validar aún en backend)\n' +
+        'email: ' + payload.email + '\n' +
+        'nombre: ' + payload.name + '\n' +
+        'exp: ' + new Date(payload.exp * 1000).toLocaleString();
+    }
+  </script>
+</body>
+</html>
