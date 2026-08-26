@@ -110,7 +110,8 @@
           imgEl.style.display = 'block';
         } else {
           resultadoEl.textContent =
-            'Error\n' + 'code: ' + result.code + '\n' + 'tiempo total: ' + clientElapsedMs + ' ms';
+            'Error\n' + 'code: ' + result.code + '\n' + 'tiempo total: ' + clientElapsedMs + ' ms' +
+            (result.debug ? '\ndebug: ' + result.debug : '');
         }
       } catch (err) {
         resultadoEl.textContent = 'Error de red: ' + err.toString();

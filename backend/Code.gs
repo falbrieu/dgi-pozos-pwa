@@ -29,7 +29,8 @@ function doPost(e) {
       }
     }
   } catch (err) {
-    response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString() };
+    // TEMPORAL, solo V0/debug: ver nota en handleGetProfile.
+    response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString(), debug: String(err) };
   }
 
   return ContentService
@@ -127,7 +128,10 @@ function handleGetProfile(sessionToken, wellId) {
   try {
     profile = profileService_getProfile(wellId);
   } catch (err) {
-    return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString() };
+    // TEMPORAL, solo V0/debug: exponer el error real para poder diagnosticar
+    // desde el frontend, ya que la UI de ejecuciones de Apps Script no deja
+    // ver el detalle. Sacar este campo "debug" antes de V1.
+    return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString(), debug: String(err) };
   }
   var elapsedMs = Date.now() - startTime;
 
