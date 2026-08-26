@@ -7,9 +7,9 @@
 
 var GOOGLE_CLIENT_ID = '970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com';
 
-// V0 lo dejamos corto (60s) a proposito, para poder probar la expiracion sin
-// esperar horas. En V1 esto sube a algo como 12 horas.
-var SESSION_TTL_SECONDS = 60;
+// Ya se probo la expiracion con 60s. Para las pruebas de Drive que siguen,
+// conviene una sesion mas comoda; en V1 esto sube a algo como 12 horas.
+var SESSION_TTL_SECONDS = 1800;
 
 function doPost(e) {
   var response;
@@ -22,6 +22,8 @@ function doPost(e) {
         response = handleLogin(body.idToken);
       } else if (body.action === 'checkSession') {
         response = handleCheckSession(body.sessionToken);
+      } else if (body.action === 'getProfile') {
+        response = handleGetProfile(body.sessionToken, body.wellId);
       } else {
         response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: 'accion desconocida: ' + body.action };
       }
@@ -108,6 +110,69 @@ function handleCheckSession(sessionToken) {
     status: 'ok',
     data: { email: result.email, message: 'sesion validada localmente, sin llamar a Google' }
   };
+}
+
+function handleGetProfile(sessionToken, wellId) {
+  var session = verifySessionToken(sessionToken);
+  if (!session.valid) {
+    return { status: 'error', code: 'UNAUTHORIZED', message: 'sessionToken invalido: ' + session.reason };
+  }
+
+  if (!wellId || !/^\d{2}-\d{4}$/.test(wellId)) {
+    return { status: 'error', code: 'INVALID_WELL_ID', message: 'formato invalido: ' + wellId };
+  }
+
+  var startTime = Date.now();
+  var profile;
+  try {
+    profile = profileService_getProfile(wellId);
+  } catch (err) {
+    return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString() };
+  }
+  var elapsedMs = Date.now() - startTime;
+
+  if (!profile.found) {
+    return { status: 'error', code: 'PROFILE_NOT_FOUND', message: 'no se encontro perfil para ' + wellId };
+  }
+
+  var bytes = profile.blob.getBytes();
+  var imageBase64 = Utilities.base64Encode(bytes);
+
+  return {
+    status: 'ok',
+    data: {
+      wellId: wellId,
+      mimeType: profile.blob.getContentType(),
+      imageBase64: imageBase64,
+      originalSizeBytes: bytes.length,
+      base64SizeBytes: imageBase64.length,
+      elapsedMsEnDrive: elapsedMs
+    }
+  };
+}
+
+// ProfileService: logica de negocio pura. No sabe si el resultado se va a
+// mandar como base64, como link, o de cualquier otra forma - eso lo decide
+// handleGetProfile (capa API), no esta funcion.
+function profileService_getProfile(wellId) {
+  return driveProfileRepository_getFile(wellId);
+}
+
+// DriveProfileRepository: la unica funcion que sabe que existe Drive y
+// getFilesByName(). Si el dia de manana cambia el mecanismo de busqueda
+// (por ejemplo, un indice), se cambia solo aca.
+function driveProfileRepository_getFile(wellId) {
+  var folderId = PropertiesService.getScriptProperties().getProperty('FOLDER_ID');
+  if (!folderId) {
+    throw new Error('FOLDER_ID no configurado en Script Properties');
+  }
+  var folder = DriveApp.getFolderById(folderId);
+  var files = folder.getFilesByName(wellId + '.jpg');
+  if (!files.hasNext()) {
+    return { found: false };
+  }
+  var file = files.next();
+  return { found: true, blob: file.getBlob() };
 }
 
 function handleLogin(idToken) {

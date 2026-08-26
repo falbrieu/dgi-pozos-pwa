@@ -20,6 +20,13 @@
 
   <button id="btnCheckSession" style="display:none">Probar sessionToken guardado (segunda llamada)</button>
 
+  <div id="bloqueProfile" style="display:none; margin-top:1em;">
+    <input id="inputWellId" type="text" placeholder="03-0123" />
+    <button id="btnGetProfile">Buscar perfil (V0)</button>
+    <pre id="resultadoProfile"></pre>
+    <img id="imagenProfile" style="max-width:100%; display:none;" />
+  </div>
+
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_fttbCjlZaE7qjhZipqRxvLtdXZV1kCaEjyOeK8UZEJy9VgC5LmAGiyUtVeUZRq1Z/exec';
@@ -44,6 +51,7 @@
         if (result.status === 'ok' && result.data && result.data.sessionToken) {
           localStorage.setItem('sessionToken', result.data.sessionToken);
           document.getElementById('btnCheckSession').style.display = 'inline-block';
+          document.getElementById('bloqueProfile').style.display = 'block';
         }
       } catch (err) {
         document.getElementById('resultado').textContent =
@@ -69,6 +77,47 @@
     }
 
     document.getElementById('btnCheckSession').addEventListener('click', checkSession);
+
+    async function getProfile() {
+      const sessionToken = localStorage.getItem('sessionToken');
+      const wellId = document.getElementById('inputWellId').value.trim();
+      const resultadoEl = document.getElementById('resultadoProfile');
+      const imgEl = document.getElementById('imagenProfile');
+      imgEl.style.display = 'none';
+      resultadoEl.textContent = 'Buscando ' + wellId + '...';
+
+      const clientStart = performance.now();
+      try {
+        const backendResponse = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'getProfile', sessionToken: sessionToken, wellId: wellId })
+        });
+        const result = await backendResponse.json();
+        const clientElapsedMs = Math.round(performance.now() - clientStart);
+
+        if (result.status === 'ok') {
+          const d = result.data;
+          resultadoEl.textContent =
+            'OK\n' +
+            'wellId: ' + d.wellId + '\n' +
+            'mimeType: ' + d.mimeType + '\n' +
+            'tamaño original: ' + d.originalSizeBytes + ' bytes (' + (d.originalSizeBytes / 1024 / 1024).toFixed(2) + ' MB)\n' +
+            'tamaño base64: ' + d.base64SizeBytes + ' bytes (' + (d.base64SizeBytes / 1024 / 1024).toFixed(2) + ' MB)\n' +
+            'tiempo en Apps Script (busqueda+lectura Drive): ' + d.elapsedMsEnDrive + ' ms\n' +
+            'tiempo total ida y vuelta (cliente): ' + clientElapsedMs + ' ms';
+          imgEl.src = 'data:' + d.mimeType + ';base64,' + d.imageBase64;
+          imgEl.style.display = 'block';
+        } else {
+          resultadoEl.textContent =
+            'Error\n' + 'code: ' + result.code + '\n' + 'tiempo total: ' + clientElapsedMs + ' ms';
+        }
+      } catch (err) {
+        resultadoEl.textContent = 'Error de red: ' + err.toString();
+      }
+    }
+
+    document.getElementById('btnGetProfile').addEventListener('click', getProfile);
   </script>
 </body>
 </html>
