@@ -8,7 +8,8 @@
     loading: document.getElementById('screen-loading'),
     login: document.getElementById('screen-login'),
     main: document.getElementById('screen-main'),
-    disabled: document.getElementById('screen-disabled')
+    disabled: document.getElementById('screen-disabled'),
+    offline: document.getElementById('screen-offline')
   };
 
   function showScreen(name) {
@@ -246,7 +247,16 @@
   });
 
   // --- Recuperacion de sesion al cargar ---
+  // Chequea navigator.onLine ANTES de intentar checkSession o Google: si
+  // no hay conexion, no tiene sentido pedirle nada a Apps Script ni a
+  // Google, y el usuario debe ver un aviso claro, no un login roto sin
+  // explicacion.
   function init() {
+    if (!navigator.onLine) {
+      showScreen('offline');
+      return;
+    }
+
     var stored = localStorage.getItem('sessionToken');
     if (!stored) {
       goToLogin();
@@ -265,9 +275,23 @@
         goToLogin();
       }
     }).catch(function () {
-      goToLogin();
+      // checkSession fallo por red (offline real o servicio caido) - se
+      // reusa la misma pantalla, con el mensaje que corresponda.
+      document.getElementById('offline-message').textContent = networkAwareMessage();
+      showScreen('offline');
     });
   }
+
+  document.getElementById('btn-retry-offline').addEventListener('click', init);
+
+  // Si vuelve la conexion mientras se esta mostrando la pantalla de sin
+  // conexion, reintenta el arranque solo, sin que el usuario tenga que
+  // tocar nada.
+  window.addEventListener('online', function () {
+    if (!screens.offline.hidden) {
+      init();
+    }
+  });
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js');

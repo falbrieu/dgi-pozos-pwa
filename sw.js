@@ -32,6 +32,35 @@ function isExternalApi(url) {
   return url.indexOf('script.google.com') !== -1 || url.indexOf('accounts.google.com') !== -1;
 }
 
+// Intenta la red primero; si responde, actualiza el cache con lo fresco.
+// Si la red falla, cae al cache bajo la clave indicada (por defecto, la
+// del propio request).
+function networkFirstThenCache(request, cacheKey) {
+  var key = cacheKey || request;
+  return fetch(request)
+    .then(function (response) {
+      var responseClone = response.clone();
+      caches.open(CACHE_NAME).then(function (cache) {
+        cache.put(key, responseClone);
+      });
+      return response;
+    })
+    .catch(function () {
+      return caches.match(key).then(function (cached) {
+        return cached || Response.error();
+      });
+    });
+}
+
+// Busca el shell cacheado probando primero la clave canonica
+// ("./index.html") y, si no esta, "./" como respaldo - para no depender
+// de que la URL exacta de una navegacion coincida con una clave puntual.
+function matchCachedShell() {
+  return caches.match('./index.html').then(function (cached) {
+    return cached || caches.match('./');
+  });
+}
+
 // Guardado detras de "typeof self !== 'undefined'" para poder hacer
 // require() de este archivo desde Jest (Node no tiene "self") sin que
 // intente registrar listeners de verdad. En el navegador/Service Worker
@@ -40,7 +69,19 @@ if (typeof self !== 'undefined') {
   self.addEventListener('install', function (event) {
     event.waitUntil(
       caches.open(CACHE_NAME).then(function (cache) {
-        return cache.addAll(SHELL_FILES);
+        // cache.addAll() es todo-o-nada: si UN archivo falla al buscarse
+        // (por ejemplo un hiccup transitorio del CDN), el install
+        // completo rechaza y el Service Worker nunca llega a instalarse
+        // ni a activarse - ahi es cuando aparece el dinosaurio de Chrome,
+        // porque no hay ningun SW controlando la pagina. Por eso cada
+        // archivo se cachea por separado, tolerando fallos individuales.
+        return Promise.all(
+          SHELL_FILES.map(function (url) {
+            return cache.add(url).catch(function (err) {
+              console.error('No se pudo precachear ' + url, err);
+            });
+          })
+        );
       })
     );
     self.skipWaiting();
@@ -64,21 +105,31 @@ if (typeof self !== 'undefined') {
       return;
     }
 
-    event.respondWith(
-      fetch(event.request)
-        .then(function (response) {
-          var responseClone = response.clone();
-          caches.open(CACHE_NAME).then(function (cache) {
-            cache.put(event.request, responseClone);
-          });
-          return response;
-        })
-        .catch(function () {
-          return caches.match(event.request).then(function (cached) {
-            return cached || Response.error();
-          });
-        })
-    );
+    // Cualquier navegacion (abrir/recargar la app) se resuelve siempre
+    // contra el index.html cacheado si la red falla, sin importar si la
+    // URL exacta de esa navegacion coincide byte a byte con una clave de
+    // cache puntual - es lo que permite abrir el shell offline de forma
+    // confiable en vez de depender de un match exacto.
+    if (event.request.mode === 'navigate') {
+      event.respondWith(
+        fetch(event.request)
+          .then(function (response) {
+            var responseClone = response.clone();
+            caches.open(CACHE_NAME).then(function (cache) {
+              cache.put('./index.html', responseClone);
+            });
+            return response;
+          })
+          .catch(function () {
+            return matchCachedShell().then(function (cached) {
+              return cached || Response.error();
+            });
+          })
+      );
+      return;
+    }
+
+    event.respondWith(networkFirstThenCache(event.request));
   });
 }
 
