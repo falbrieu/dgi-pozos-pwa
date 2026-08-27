@@ -37,10 +37,12 @@ function handleGetProfile(sessionToken, wellId) {
   }
 
   if (!isUserActive(session.email)) {
+    logHistoryEvent(session.email, 'getProfile', wellId, 'USER_DISABLED');
     return { status: 'error', code: 'USER_DISABLED', message: 'usuario no habilitado: ' + session.email };
   }
 
   if (!wellId || !/^\d{2}-\d{4}$/.test(wellId)) {
+    logHistoryEvent(session.email, 'getProfile', wellId, 'INVALID_WELL_ID');
     return { status: 'error', code: 'INVALID_WELL_ID', message: 'formato invalido: ' + wellId };
   }
 
@@ -49,17 +51,21 @@ function handleGetProfile(sessionToken, wellId) {
   try {
     profile = profileService_getProfile(wellId);
   } catch (err) {
+    logHistoryEvent(session.email, 'getProfile', wellId, 'SERVICE_UNAVAILABLE');
     // TEMPORAL, solo V0/debug: se saca en un paso posterior de V1.
     return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString(), debug: String(err) };
   }
   var elapsedMs = Date.now() - startTime;
 
   if (!profile.found) {
+    logHistoryEvent(session.email, 'getProfile', wellId, 'PROFILE_NOT_FOUND');
     return { status: 'error', code: 'PROFILE_NOT_FOUND', message: 'no se encontro perfil para ' + wellId };
   }
 
   var bytes = profile.blob.getBytes();
   var imageBase64 = Utilities.base64Encode(bytes);
+
+  logHistoryEvent(session.email, 'getProfile', wellId, 'OK');
 
   return {
     status: 'ok',

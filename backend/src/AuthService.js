@@ -101,12 +101,17 @@ function handleLogin(idToken) {
   var tokenInfo = JSON.parse(httpResponse.getContentText());
 
   if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {
+    logHistoryEvent(tokenInfo.email, 'login', null, 'UNAUTHORIZED');
     return { status: 'error', code: 'UNAUTHORIZED', message: 'aud no coincide con nuestro client id' };
   }
 
   if (!isUserActive(tokenInfo.email)) {
+    logHistoryEvent(tokenInfo.email, 'login', null, 'USER_DISABLED');
     return { status: 'error', code: 'USER_DISABLED', message: 'usuario no habilitado: ' + tokenInfo.email };
   }
+
+  var sessionToken = createSessionToken(tokenInfo.email);
+  logHistoryEvent(tokenInfo.email, 'login', null, 'OK');
 
   return {
     status: 'ok',
@@ -114,7 +119,7 @@ function handleLogin(idToken) {
       email: tokenInfo.email,
       name: tokenInfo.name || null,
       emailVerified: tokenInfo.email_verified === 'true' || tokenInfo.email_verified === true,
-      sessionToken: createSessionToken(tokenInfo.email)
+      sessionToken: sessionToken
     }
   };
 }
