@@ -10,7 +10,11 @@ Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` d
 
 ## V1 — Consulta de perfiles ITF (en preparación)
 
-**Paso 0 (en curso, antes de tocar el resto de V1)**: experimento controlado de optimización de imagen sobre un único archivo real (`01-0012.jpg`), generando 3 versiones de prueba (~300/500/800 KB) sin tocar el corpus completo de ~2GB ni el original. Objetivo: medir con el mismo mecanismo base64 ya validado si una versión más liviana del JPG acerca el tiempo total al objetivo de "<2s", antes de decidir el parámetro de compresión definitivo para procesar el corpus completo.
+**Paso 0 — optimización de imágenes (en curso, antes de tocar el resto de V1)**:
+1. ~~Experimento controlado sobre un único archivo real (`01-0012.jpg`), 3 versiones de prueba (~300/500/800 KB).~~ Hecho — parámetro elegido: calidad JPEG 52, sin redimensionar (detalle en `docs/architecture.md`).
+2. Procesar en lote todo el corpus de `THUMB` con `scripts/batch_compress.py` hacia una carpeta nueva `THUMB_WEB`, sin tocar los originales. **Pendiente de ejecutar.**
+3. Subir `THUMB_WEB` a Drive.
+4. Reapuntar `DriveProfileRepository` a `THUMB_WEB` y volver a medir tiempos reales con el mecanismo base64 ya validado, antes de dar este paso por cerrado.
 
 Resto del alcance de V1: sin cambios respecto a la especificación ya acordada — login con Google + allowlist, búsqueda de pozo con validación/normalización de formato, los 5 estados de UI (inicial/buscando/encontrado/no encontrado/error/sin conexión), capas Servicios/Repositorios separadas en archivos, historial de consultas registrado (no visible todavía), tests de validación/`AuthService`/`ProfileService`, documentación (README, este roadmap, architecture.md, CHANGELOG.md), y tag `v1.0.0` una vez verificados los 21 criterios de aceptación.
 

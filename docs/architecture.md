@@ -46,6 +46,18 @@ Mecanismo vigente al cierre de V0: base64 embebido en la respuesta JSON de una �
 
 Primer paso de V1 (en curso, no forma parte del cierre de V0): reducir el tamaño real de los JPG servidos generando una versión "para pantalla" del corpus, en vez de cambiar el mecanismo de entrega. Se descarta introducir Cloudflare (u otro runtime adicional) a menos que la optimización de imágenes resulte insuficiente una vez medida.
 
+**Decisión confirmada — parámetro de compresión para V1**: se probaron 3 variantes de `01-0012.jpg` (`scripts/resize_experiment.py`, targets ~300/500/800 KB). Resultado:
+
+| Versión | Tamaño real | Base64 | Tiempo total | Evaluación |
+|---|---|---|---|---|
+| A (calidad JPEG 52, resolución original 2958x2303) | 545 KB | 727 KB | 3.2 s | buena calidad visual |
+| B (calidad JPEG, target 500KB) | 575 KB | 766 KB | 3.5 s | sin mejora clara sobre A |
+| C (target 800KB) | 937 KB | 1249 KB | 7.0 s | demasiado lenta |
+
+Se adopta **Versión A** como estándar: **recompresión JPEG a calidad 52, sin redimensionar** (cada archivo conserva su resolución nativa). Importante: en la búsqueda de A nunca hizo falta reducir resolución — la calidad 52 sola, a resolución original, ya alcanzó ese tamaño. Por eso el parámetro que se generaliza a todo el corpus es "calidad 52", no una resolución fija en píxeles (los archivos del corpus no son todos de la misma resolución nativa).
+
+Los originales de `THUMB` **no se tocan**. El corpus completo se recomprime con `scripts/batch_compress.py` hacia una carpeta nueva (`THUMB_WEB`), que luego se sube a Drive como una carpeta separada. `DriveProfileRepository` todavía no fue reapuntado a `THUMB_WEB` — eso queda para cuando el lote esté procesado y subido.
+
 **Contrato de errores**: `{status, code, message}`, con `debug` agregado temporalmente en V0 para diagnóstico (a eliminar antes de V1). Códigos definidos: `INVALID_WELL_ID`, `UNAUTHORIZED`, `USER_DISABLED`, `PROFILE_NOT_FOUND`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE`.
 
 **Configuración/secretos**: `GOOGLE_CLIENT_ID` es público por diseño (vive en el código, tanto frontend como backend). `SESSION_SECRET` y `FOLDER_ID` viven únicamente en Script Properties de Apps Script, nunca en el código fuente.
