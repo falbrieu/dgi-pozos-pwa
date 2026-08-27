@@ -45,6 +45,15 @@ function handleGetProfile(sessionToken, wellId) {
     return { status: 'error', code: 'INVALID_WELL_ID', message: 'formato invalido: ' + wellId };
   }
 
+  // Los departamentos validos van de 01 a 19. Esta regla existe tambien
+  // en el frontend (wellIdValidator.js), pero el backend nunca confia
+  // unicamente en esa validacion - por eso se repite aca.
+  var departamento = parseInt(wellId.substring(0, 2), 10);
+  if (departamento < 1 || departamento > 19) {
+    logHistoryEvent(session.email, 'getProfile', wellId, 'INVALID_WELL_ID');
+    return { status: 'error', code: 'INVALID_WELL_ID', message: 'departamento fuera de rango: ' + wellId };
+  }
+
   var startTime = Date.now();
   var profile;
   try {

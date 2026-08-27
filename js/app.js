@@ -1,4 +1,6 @@
 (function () {
+  var GOOGLE_CLIENT_ID = '970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com';
+
   var sessionToken = null;
   var currentEmail = null;
 
@@ -21,6 +23,39 @@
 
   function networkAwareMessage() {
     return navigator.onLine ? getErrorMessage('SERVICE_UNAVAILABLE') : getErrorMessage('OFFLINE');
+  }
+
+  // --- Google Identity Services: init programatico, nunca declarativo ---
+  // Se inicializa (y recien ahi puede aparecer el prompt de One Tap) SOLO
+  // cuando ya sabemos que hace falta - es decir, despues de intentar
+  // recuperar la sesion propia y confirmar que no hay una valida. Asi se
+  // evita el prompt de Google apareciendo encima de una sesion ya
+  // recuperada con exito.
+  var gsiLoaded = false;
+  var shouldInitGoogleSignIn = false;
+
+  window.onGsiLoaded = function () {
+    gsiLoaded = true;
+    tryInitGoogleSignIn();
+  };
+
+  function tryInitGoogleSignIn() {
+    if (!gsiLoaded || !shouldInitGoogleSignIn) {
+      return;
+    }
+    google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: handleCredentialResponse,
+      auto_select: true
+    });
+    google.accounts.id.renderButton(document.getElementById('google-signin-button'), { type: 'standard' });
+    google.accounts.id.prompt();
+  }
+
+  function goToLogin() {
+    shouldInitGoogleSignIn = true;
+    tryInitGoogleSignIn();
+    showScreen('login');
   }
 
   // --- Area de resultado (dentro de screen-main, no se pierde el input) ---
@@ -53,7 +88,7 @@
   // --- Login ---
   var loginErrorEl = document.getElementById('login-error');
 
-  window.handleCredentialResponse = function (response) {
+  function handleCredentialResponse(response) {
     loginErrorEl.hidden = true;
     apiLogin(response.credential).then(function (result) {
       if (result.status === 'ok') {
@@ -71,7 +106,7 @@
       loginErrorEl.textContent = networkAwareMessage();
       loginErrorEl.hidden = false;
     });
-  };
+  }
 
   function enterMain() {
     document.getElementById('user-email').textContent = currentEmail;
@@ -83,7 +118,12 @@
     localStorage.removeItem('sessionToken');
     sessionToken = null;
     currentEmail = null;
-    showScreen('login');
+    if (gsiLoaded) {
+      // Sin esto, auto_select podria volver a loguear silenciosamente a
+      // la misma cuenta apenas se re-inicialice el boton de Google.
+      google.accounts.id.disableAutoSelect();
+    }
+    goToLogin();
   }
 
   document.getElementById('btn-logout').addEventListener('click', logout);
@@ -93,6 +133,21 @@
   var form = document.getElementById('search-form');
   var input = document.getElementById('input-well-id');
   var inputError = document.getElementById('input-error');
+
+  // Enmascarado en vivo: solo digitos, guion automatico despues del
+  // segundo digito, maximo 6 digitos reales. El pegado usa la
+  // normalizacion completa (acepta guion, espacios, etc.) en vez del
+  // enmascarado simple, para que pegar "3-123" siga funcionando.
+  input.addEventListener('input', function () {
+    input.value = formatWellIdInput(input.value);
+  });
+
+  input.addEventListener('paste', function (event) {
+    event.preventDefault();
+    var pasted = (event.clipboardData || window.clipboardData).getData('text');
+    var normalizado = normalizeWellId(pasted);
+    input.value = isValidWellId(normalizado) ? normalizado : formatWellIdInput(pasted);
+  });
 
   form.addEventListener('submit', function (event) {
     event.preventDefault();
@@ -128,7 +183,7 @@
   function init() {
     var stored = localStorage.getItem('sessionToken');
     if (!stored) {
-      showScreen('login');
+      goToLogin();
       return;
     }
     apiCheckSession(stored).then(function (result) {
@@ -140,10 +195,10 @@
         showScreen('disabled');
       } else {
         localStorage.removeItem('sessionToken');
-        showScreen('login');
+        goToLogin();
       }
     }).catch(function () {
-      showScreen('login');
+      goToLogin();
     });
   }
 

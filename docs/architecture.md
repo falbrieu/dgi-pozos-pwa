@@ -62,14 +62,32 @@ Los originales de `THUMB` **no se tocan**. El corpus completo se recomprime con 
 
 **Configuración/secretos**: `GOOGLE_CLIENT_ID` es público por diseño (vive en el código, tanto frontend como backend). `SESSION_SECRET` y `FOLDER_ID` viven únicamente en Script Properties de Apps Script, nunca en el código fuente.
 
-## Pendiente para V1 (no implementado ni probado en V0)
+## V1 — implementado hasta el momento
 
-- Allowlist de usuarios (hoja "Usuarios") + cache de estado con `CacheService` (freshness objetivo: ≤5 minutos).
-- Rate limiting con `CacheService` (contadores por hora; no es atómico, limitación conocida y aceptada a esta escala).
-- Historial de consultas (hoja "Historial"), como auditoría pura — nunca se lee para decidir nada en caliente.
-- Eliminar el campo `debug` temporal de las respuestas de error.
-- UI final, normalización completa de `wellId` (`3-123` → `03-0123`, guion unicode, espacios).
-- Separación real en archivos (`AuthService.js`, `ProfileService.js`, etc.) con el patrón de export condicional para poder testear con Jest sin duplicar código (ver especificación de V1 acordada antes de V0).
+- Backend separado en capas (`backend/src/Api.js`, `AuthService.js`, `ProfileService.js`, `DriveProfileRepository.js`, `SheetUserRepository.js`, `SheetHistoryRepository.js`, `HistoryService.js`, `Config.js`), migrado desde el `Code.gs` único de V0 sin cambiar comportamiento observable.
+- Allowlist real (hoja "Usuarios") con cache de 5 minutos en `AuthService.isUserActive`, aplicada en `login`, `checkSession` y `getProfile` — deshabilitar a alguien tarda como máximo 5 minutos en tener efecto, no hasta que expire la sesión.
+- Historial de auditoría (hoja "Historial") de `login` y `getProfile` (todos sus resultados), append-only, nunca se lee para decidir nada. `checkSession` no se audita (es recuperación silenciosa, no una acción de negocio).
+- Campo `debug` temporal eliminado de las respuestas de error.
+- Frontend reescrito con máquina de estados (cargando sesión, no autenticado, listo, buscando, encontrado, no encontrado, usuario deshabilitado, sin conexión/error), sin restos de la UI de diagnóstico de V0. `manifest.json` + `sw.js` (cachea solo el app shell).
+
+**Rate limiting**: diseñado (contador por email/hora vía `CacheService`) pero **diferido explícitamente fuera de V1.0** — decisión del 2026-08-27, queda como mejora V1.x, no bloqueante.
+
+### Validación y normalización de `wellId` — reglas finales
+
+Se separan dos preguntas distintas, cada una con su propia regla:
+
+1. **Normalización de formato** (`js/wellIdValidator.js`, frontend únicamente): solo se normaliza cuando el punto de corte entre departamento y pozo es inequívoco — hay separador explícito (guion, guion unicode, o espacio), o son exactamente 6 dígitos sin separador (2+4, sin ambigüedad posible). Si no se puede determinar el corte sin adivinar (ej. `112`, `3123` sin separador), se deja el valor sin normalizar para que la validación lo rechace — **nunca se adivina un corte ambiguo**.
+2. **Validación de rango**: los departamentos válidos van de **01 a 19**. Esta regla existe en **ambos lados**, de forma independiente: `js/wellIdValidator.js` en el frontend y `backend/src/Api.js` en el backend (el backend nunca confía únicamente en la validación del cliente). Un departamento fuera de rango (`00`, `20` o superior) devuelve `INVALID_WELL_ID` sin llegar a consultar Drive.
+
+El input en pantalla tiene además un enmascarado en vivo (`formatWellIdInput`): solo dígitos, guion automático después del segundo dígito, máximo 6 dígitos reales — igual en Android y iPhone, ya que iOS no ofrece el guion cómodamente en el teclado numérico. El pegado de texto usa la normalización completa (acepta variantes con separador), no el enmascarado simple.
+
+### Google Identity Services — init programático, no declarativo
+
+V0 inicializaba Google Sign-In de forma declarativa (`<div id="g_id_onload" data-auto_select="true">`), lo que hacía que el prompt de "One Tap" de Google apareciera **siempre**, apenas cargaba la librería, sin importar si la sesión propia ya se había recuperado con éxito. Corregido: la inicialización (`google.accounts.id.initialize` + `.renderButton` + `.prompt()`) ahora es 100% programática desde `js/app.js`, y solo se dispara si `checkSession` ya determinó que no hay una sesión propia válida. También se llama a `google.accounts.id.disableAutoSelect()` al cerrar sesión, para que "Cerrar sesión" no quede anulado por un re-login silencioso de Google.
+
+### Fuente de imágenes — confirmado
+
+V1 usa la carpeta `THUMB` actual tal cual (no `THUMB_WEB`). No se reprocesa el corpus por ahora — los archivos reales ya son livianos (37-170 KB), muy por debajo del caso de 2.24 MB que motivó la investigación de compresión. Base64 se mantiene como mecanismo de entrega en esta etapa.
 
 ## Riesgos conocidos, documentados y aceptados
 
