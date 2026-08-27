@@ -1,8 +1,12 @@
 # Changelog
 
-Formato basado en [Keep a Changelog](https://keepachangelog.com/) y [SemVer](https://semver.org/). Sin tags todavía — este archivo empieza a llevarse recién ahora, al cierre de V1; el detalle completo de cómo se llegó hasta acá está en el historial de commits y en `docs/architecture.md`/`docs/roadmap.md`.
+Formato basado en [Keep a Changelog](https://keepachangelog.com/) y [SemVer](https://semver.org/). Este archivo empieza a llevarse recién en el cierre de V1; el detalle completo de cómo se llegó hasta acá está en el historial de commits y en `docs/architecture.md`/`docs/roadmap.md`.
 
-## [Unreleased] — preparando v1.0.0
+## [Unreleased]
+
+Sin cambios todavía. Próxima etapa: diseño visual/estético y UX, sin tocar la lógica de esta versión.
+
+## [1.0.0] - 2026-08-27
 
 ### Agregado
 - Login con Google Identity Services (init programático, sin prompt redundante) + sesión propia firmada (HMAC-SHA256, 12h) validada localmente sin volver a llamar a Google en cada request.
@@ -20,6 +24,7 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/) y [SemVer](htt
 - Prompt de Google apareciendo encima de una sesión ya recuperada (init de Google Identity Services pasó de declarativo a programático).
 - Enmascarado del input de pozo inconsistente entre plataformas (causado por no subir la versión de cache del Service Worker).
 - Dinosaurio de Chrome al abrir offline (el `install` del Service Worker era todo-o-nada; ahora tolera fallos individuales por archivo y maneja explícitamente la navegación).
+- Google Sheets reinterpretaba el `wellId` de "Historial" como fecha/número (perdía el cero inicial de `01-0012`) aunque se escribiera como texto; ahora se fuerza `setNumberFormat('@')` explícitamente sobre la celda al escribirla.
 
 ### Descartado / fuera de alcance de V1.0
 - Mecanismo de entrega de imagen vía `doGet` + `Blob` directo — no soportado por Apps Script Web Apps (confirmado con la documentación oficial).

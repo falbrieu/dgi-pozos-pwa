@@ -8,7 +8,7 @@ Resultado: **GO de arquitectura**. Ningún eslabón obligó a cambiar de platafo
 
 Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` directo — no soportado por la plataforma (Apps Script Web Apps solo puede devolver `HtmlOutput`/`TextOutput`). Código eliminado del proyecto; detalle en `docs/architecture.md`.
 
-## V1 — Consulta de perfiles ITF (en curso)
+## V1 — Consulta de perfiles ITF (CERRADA — tag `v1.0.0`, 2026-08-27)
 
 **Optimización de imágenes**: decisión tomada el 2026-08-27 — se descarta por ahora. V1 usa la carpeta `THUMB` actual tal cual (no `THUMB_WEB`), sin reprocesar el corpus, porque los archivos reales ya son livianos (37-170 KB). Queda documentado como mejora opcional/no bloqueante para más adelante si el corpus crece con archivos más pesados.
 
@@ -31,7 +31,9 @@ Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` d
 
 **Documentación: completa.** `README.md` actualizado para V1 (antes describía V0), `CHANGELOG.md` creado, este roadmap y `docs/architecture.md` al día.
 
-No se pasa a V1.1 hasta que V1 se declare estable con los 21 criterios de aceptación verificados (checklist en `docs/architecture.md` antes de taggear `v1.0.0`).
+**Fix final antes del tag**: la celda `wellId` de "Historial" se forzaba a texto plano (`setNumberFormat('@')`) porque Sheets reinterpretaba `01-0012` como fecha/número — confirmado con una fila real antes de cerrar V1.
+
+Los 21 criterios de aceptación quedaron verificados (checklist en `docs/architecture.md`). Próxima etapa: **diseño visual/estético y UX**, sin tocar la lógica ya validada de V1.
 
 ## V1.1 — Historial visible
 

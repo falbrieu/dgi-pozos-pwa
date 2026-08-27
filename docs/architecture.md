@@ -1,6 +1,6 @@
 # Arquitectura
 
-Estado: V0 cerrada (GO). V1 en preparación.
+Estado: V0 cerrada (GO). **V1 cerrada — tag `v1.0.0` (2026-08-27).** Próxima etapa: diseño visual/estético y UX, sin cambios de lógica.
 
 ## Capas
 
@@ -123,9 +123,9 @@ Basado en la evidencia acumulada de las pruebas manuales de cada paso (no es una
 | 18 | Funciona en escritorio | ✅ Aprobado |
 | 19 | Tests de flujos críticos | ✅ Aprobado (76 tests, `wellIdValidator`/`AuthService`/`ProfileService`/`Api`/`sw.js`) |
 | 20 | Documentación de despliegue | ✅ Aprobado (`README.md` actualizado) |
-| 21 | Git tag/release de V1 estable | ⏳ Pendiente — es el paso siguiente, explícitamente no hecho todavía |
+| 21 | Git tag/release de V1 estable | ✅ Aprobado — tag `v1.0.0` |
 
-Ningún ítem cae en "no aplica" — los 21 criterios de la especificación original son todos relevantes para V1.
+Ningún ítem cae en "no aplica" — los 21 criterios de la especificación original son todos relevantes para V1. **V1 cerrada.**
 
 ## Riesgos conocidos, documentados y aceptados
 
