@@ -1,9 +1,10 @@
 // AuthService: identidad y sesion. No sabe nada de HTTP (eso es Api.js) ni
 // de Drive/Sheets (eso son los repositorios).
 
-// Sin cambios de comportamiento en este paso: se mantiene en 1800s tal
-// como estaba en V0. Sube a 12 horas en un paso posterior, explicito.
-var SESSION_TTL_SECONDS = 1800;
+// Valor definitivo de V1: 12 horas (43200s). Antes estaba en 1800s
+// (30 min), usado durante el desarrollo para poder probar la expiracion
+// y la recuperacion de sesion sin esperar horas.
+var SESSION_TTL_SECONDS = 43200;
 
 // Cuanto tiempo, como maximo, puede tardar en notarse que alguien fue
 // deshabilitado en la hoja "Usuarios" (evita golpear Sheets en cada
