@@ -14,6 +14,7 @@
 
 import sys
 import os
+import time
 from PIL import Image
 
 SCALE_FACTOR = 0.85 ** 5  # = 0.4437053125, el mismo factor que dio la Version A
@@ -49,12 +50,15 @@ def main():
         print('No se encontraron archivos .jpg en ' + src_dir)
         sys.exit(1)
 
-    print('Procesando %d archivos (escala %.10f, calidad JPEG %d)...' % (len(files), SCALE_FACTOR, JPEG_QUALITY))
+    total_files = len(files)
+    print('Encontrados %d archivos .jpg en %s' % (total_files, src_dir))
+    print('Procesando (escala %.10f, calidad JPEG %d)...' % (SCALE_FACTOR, JPEG_QUALITY))
     print()
 
     total_original = 0
     total_new = 0
     errores = []
+    start_time = time.time()
 
     for i, name in enumerate(files, 1):
         src_path = os.path.join(src_dir, name)
@@ -63,21 +67,25 @@ def main():
             orig_size, new_size, w, h = compress_one(src_path, dst_path)
             total_original += orig_size
             total_new += new_size
-            print('  %s: %dx%d px, %d bytes (original: %d bytes)' % (name, w, h, new_size, orig_size))
         except Exception as err:
             errores.append((name, str(err)))
+            print('  ERROR en %s: %s' % (name, err))
 
-        if i % 50 == 0 or i == len(files):
-            print('  ... %d/%d procesados' % (i, len(files)))
+        if i % 50 == 0 or i == total_files:
+            print('  ... %d/%d procesados' % (i, total_files))
+
+    elapsed_seconds = time.time() - start_time
 
     print()
     print('Listo.')
-    print('  archivos procesados sin error: %d' % (len(files) - len(errores)))
+    print('  archivos encontrados: %d' % total_files)
+    print('  procesados sin error: %d' % (total_files - len(errores)))
     print('  errores: %d' % len(errores))
     print('  tamano total original: %.2f MB' % (total_original / 1024 / 1024))
     print('  tamano total nuevo: %.2f MB' % (total_new / 1024 / 1024))
     if total_original > 0:
         print('  reduccion: %.1f%%' % (100 * (1 - total_new / total_original)))
+    print('  tiempo total: %.1f s' % elapsed_seconds)
 
     if errores:
         print()
