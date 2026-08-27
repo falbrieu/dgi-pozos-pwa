@@ -72,6 +72,14 @@ Se adopta **Versión A** como estándar: **recompresión JPEG a calidad 52, sin 
 
 **Rate limiting**: **no forma parte de V1.0** — decisión explícita del 2026-08-27, ratificada nuevamente. No existe `RateLimiter.js`, no hay contadores en `CacheService`, y el código `RATE_LIMITED` no se emite en ningún flujo. Queda solo como idea de mejora opcional para una V1.x futura (contador por email/hora vía `CacheService`), no como requisito ni pendiente de `v1.0.0`.
 
+### Service Worker — de cache-first a network-first (2026-08-27)
+
+La estrategia original (cache-first) exigía subir `CACHE_NAME` manualmente en cada commit que tocara un archivo del app shell — es lo único que hace que un dispositivo con el Service Worker ya instalado detecte que hay una versión nueva. Ese paso manual se olvidó **tres veces** durante el desarrollo de V1 (dos de ellas detectadas por pruebas del usuario, una detectada y corregida antes de que hiciera falta avisar), cada vez dejando Android/iPhone sirviendo archivos viejos mientras PC mostraba la versión nueva.
+
+Se reemplaza por **network-first con fallback a cache**: con conexión, `sw.js` siempre intenta la red primero y actualiza el cache con la respuesta fresca — el usuario ve la versión más reciente sin que dependa de ningún paso manual. Sin conexión, responde lo último que haya en cache. `CACHE_NAME` deja de necesitar incrementarse en cada cambio del shell (queda fijo en `dgi-pozos-shell`); solo haría falta cambiarlo para forzar una limpieza total del cache en algún escenario excepcional.
+
+Se agregó `sw.test.js`: verifica que cada archivo listado en `SHELL_FILES` exista realmente en el repo (evita otra clase de bug: un typo o un archivo borrado/renombrado sin actualizar la lista haría fallar `cache.addAll()` por completo en el install del Service Worker). `sw.js` expone `SHELL_FILES`/`CACHE_NAME` vía el mismo patrón de `module.exports` condicional usado en el backend, para poder testear sin duplicar código y sin que afecte la ejecución real en el navegador.
+
 ### Validación y normalización de `wellId` — reglas finales
 
 Se separan dos preguntas distintas, cada una con su propia regla:
