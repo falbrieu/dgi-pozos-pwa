@@ -1,4 +1,11 @@
-const { normalizeWellId, isValidWellId, formatWellIdInput } = require('./wellIdValidator');
+const {
+  normalizeWellId,
+  isValidWellId,
+  getWellIdError,
+  formatWellIdInput,
+  countDigitsBefore,
+  positionAfterNDigits
+} = require('./wellIdValidator');
 
 describe('normalizeWellId + isValidWellId: casos validos', () => {
   const casos = [
@@ -36,6 +43,48 @@ describe('normalizeWellId + isValidWellId: casos invalidos', () => {
   test.each(casos)('"%s" no es un wellId valido', (input) => {
     const normalizado = normalizeWellId(input);
     expect(isValidWellId(normalizado)).toBe(false);
+  });
+});
+
+describe('getWellIdError distingue formato vs rango', () => {
+  test('null (valido) para 03-0123', () => {
+    expect(getWellIdError(normalizeWellId('03-0123'))).toBeNull();
+  });
+
+  const formatoInvalido = ['AA-0123', '03-ABC', '112', '3123', '123-4567', '03-45678', ''];
+  test.each(formatoInvalido)('"%s" -> FORMAT', (input) => {
+    expect(getWellIdError(normalizeWellId(input))).toBe('FORMAT');
+  });
+
+  const rangoInvalido = ['000012', '20-0123', '00-0001', '25-0001'];
+  test.each(rangoInvalido)('"%s" -> RANGE', (input) => {
+    expect(getWellIdError(normalizeWellId(input))).toBe('RANGE');
+  });
+});
+
+describe('cursor logico al enmascarar (countDigitsBefore + positionAfterNDigits)', () => {
+  test('cuenta solo digitos antes del cursor, ignorando el guion', () => {
+    expect(countDigitsBefore('03-1234', 7)).toBe(6);
+    expect(countDigitsBefore('03-1234', 3)).toBe(2); // cursor justo despues del guion
+    expect(countDigitsBefore('03-1234', 0)).toBe(0);
+  });
+
+  test('ubica la posicion despues de N digitos en el string ya formateado', () => {
+    expect(positionAfterNDigits('01-234', 1)).toBe(1); // despues del "0"
+    expect(positionAfterNDigits('01-234', 2)).toBe(2); // despues del "1", antes del guion
+    expect(positionAfterNDigits('01-234', 5)).toBe(6); // despues del ultimo digito
+    expect(positionAfterNDigits('01-234', 0)).toBe(0);
+  });
+
+  test('backspace en el medio: borrar el "3" de "03-1234" deja el cursor tras el "0"', () => {
+    // Simula lo que ya hizo el navegador: el usuario borro un caracter y
+    // el input quedo en "0-1234" con el cursor en la posicion 1.
+    const valorTrasBackspace = '0-1234';
+    const cursorTrasBackspace = 1;
+    const digitosAntes = countDigitsBefore(valorTrasBackspace, cursorTrasBackspace);
+    const formateado = formatWellIdInput(valorTrasBackspace);
+    expect(formateado).toBe('01-234');
+    expect(positionAfterNDigits(formateado, digitosAntes)).toBe(1);
   });
 });
 

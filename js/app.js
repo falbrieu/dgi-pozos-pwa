@@ -135,11 +135,18 @@
   var inputError = document.getElementById('input-error');
 
   // Enmascarado en vivo: solo digitos, guion automatico despues del
-  // segundo digito, maximo 6 digitos reales. El pegado usa la
-  // normalizacion completa (acepta guion, espacios, etc.) en vez del
-  // enmascarado simple, para que pegar "3-123" siga funcionando.
+  // segundo digito, maximo 6 digitos reales. Preserva la posicion logica
+  // del cursor (contando digitos, no caracteres) para que backspace en
+  // cualquier punto del valor se sienta natural, no solo al final.
+  // El pegado usa la normalizacion completa (acepta guion, espacios,
+  // etc.) en vez del enmascarado simple, para que pegar "3-123" funcione.
   input.addEventListener('input', function () {
-    input.value = formatWellIdInput(input.value);
+    var cursorPos = input.selectionStart;
+    var digitsBeforeCursor = countDigitsBefore(input.value, cursorPos);
+    var formatted = formatWellIdInput(input.value);
+    input.value = formatted;
+    var newPos = positionAfterNDigits(formatted, digitsBeforeCursor);
+    input.setSelectionRange(newPos, newPos);
   });
 
   input.addEventListener('paste', function (event) {
@@ -154,8 +161,9 @@
     inputError.hidden = true;
 
     var normalized = normalizeWellId(input.value);
-    if (!isValidWellId(normalized)) {
-      inputError.textContent = getErrorMessage('INVALID_WELL_ID');
+    var wellIdError = getWellIdError(normalized);
+    if (wellIdError) {
+      inputError.textContent = getErrorMessage('INVALID_WELL_ID_' + wellIdError);
       inputError.hidden = false;
       return;
     }

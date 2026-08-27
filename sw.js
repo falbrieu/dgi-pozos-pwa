@@ -1,7 +1,11 @@
 // Service worker minimo: solo cachea el "app shell" (html/css/js/manifest).
 // Nunca cachea llamadas al backend (Apps Script) ni a Google - los datos y
 // las imagenes de los pozos siempre requieren conexion, a proposito.
-var CACHE_NAME = 'dgi-pozos-shell-v1';
+// IMPORTANTE: subir este numero cada vez que cambie algun archivo del
+// app shell (html/css/js/manifest). Es lo unico que hace que un
+// dispositivo con el Service Worker ya instalado detecte la actualizacion
+// y deje de servir los archivos viejos desde cache.
+var CACHE_NAME = 'dgi-pozos-shell-v2';
 var SHELL_FILES = [
   './',
   './index.html',

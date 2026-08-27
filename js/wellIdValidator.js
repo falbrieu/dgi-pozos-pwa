@@ -44,13 +44,23 @@ function normalizeWellId(input) {
   return s;
 }
 
-function isValidWellId(wellId) {
+// Devuelve el motivo especifico de invalidez ('FORMAT' o 'RANGE'), o null
+// si es valido. Permite mostrar un mensaje distinto para cada caso en vez
+// de un generico "formato invalido" para todo.
+function getWellIdError(wellId) {
   var match = /^(\d{2})-(\d{4})$/.exec(wellId);
   if (!match) {
-    return false;
+    return 'FORMAT';
   }
   var departamento = parseInt(match[1], 10);
-  return departamento >= WELL_ID_MIN_DEPARTAMENTO && departamento <= WELL_ID_MAX_DEPARTAMENTO;
+  if (departamento < WELL_ID_MIN_DEPARTAMENTO || departamento > WELL_ID_MAX_DEPARTAMENTO) {
+    return 'RANGE';
+  }
+  return null;
+}
+
+function isValidWellId(wellId) {
+  return getWellIdError(wellId) === null;
 }
 
 // Formatea en vivo lo que el usuario va tecleando: solo digitos, insercion
@@ -65,6 +75,38 @@ function formatWellIdInput(rawValue) {
   return digits.slice(0, 2) + '-' + digits.slice(2);
 }
 
+// Las dos funciones siguientes existen solo para preservar la posicion
+// logica del cursor cuando se reformatea el input en cada tecla (sin
+// esto, el cursor salta siempre al final y el backspace en el medio del
+// valor se siente "raro"). Cuentan/ubican en base a digitos, no a
+// caracteres, para no confundirse con el guion insertado.
+function countDigitsBefore(value, position) {
+  return String(value || '').slice(0, position).replace(/\D/g, '').length;
+}
+
+function positionAfterNDigits(formatted, n) {
+  if (n <= 0) {
+    return 0;
+  }
+  var count = 0;
+  for (var i = 0; i < formatted.length; i++) {
+    if (/\d/.test(formatted[i])) {
+      count++;
+      if (count === n) {
+        return i + 1;
+      }
+    }
+  }
+  return formatted.length;
+}
+
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { normalizeWellId, isValidWellId, formatWellIdInput };
+  module.exports = {
+    normalizeWellId,
+    isValidWellId,
+    getWellIdError,
+    formatWellIdInput,
+    countDigitsBefore,
+    positionAfterNDigits
+  };
 }
