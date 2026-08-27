@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # Uso: python batch_compress.py ruta/a/THUMB ruta/a/THUMB_WEB
 #
-# Procesamiento en lote de V1: recomprime cada JPG con la configuracion
-# elegida a partir del experimento sobre 01-0012 (version A: calidad
-# JPEG 52, sin cambiar resolucion - cada archivo conserva su propio
-# tamano nativo). Nunca modifica ni borra los originales: siempre lee
-# de una carpeta y escribe en otra distinta.
+# Procesamiento en lote de V1: reproduce la configuracion de la Version A
+# del experimento sobre 01-0012.jpg. A SI redimensiono (fue la 6ta ronda
+# de reduccion de resize_experiment.py, scale = 0.85**5), no se quedo en
+# la resolucion nativa como se penso en un primer momento. El factor de
+# escala exacto que produjo 2958x2303 a partir de 6668x5191 es 0.85**5
+# (confirmado corriendo la cuenta: da 2958x2303 exacto). Nunca modifica
+# ni borra los originales: siempre lee de una carpeta y escribe en otra
+# distinta, con el mismo nombre de archivo.
 #
 # Requiere Pillow: pip install Pillow
 
@@ -13,14 +16,18 @@ import sys
 import os
 from PIL import Image
 
+SCALE_FACTOR = 0.85 ** 5  # = 0.4437053125, el mismo factor que dio la Version A
 JPEG_QUALITY = 52
 
 
 def compress_one(src_path, dst_path):
     img = Image.open(src_path)
     img.load()
-    img.convert('RGB').save(dst_path, 'JPEG', quality=JPEG_QUALITY, optimize=True)
-    return os.path.getsize(src_path), os.path.getsize(dst_path)
+    new_width = max(1, int(img.width * SCALE_FACTOR))
+    new_height = max(1, int(img.height * SCALE_FACTOR))
+    resized = img.resize((new_width, new_height), Image.LANCZOS)
+    resized.convert('RGB').save(dst_path, 'JPEG', quality=JPEG_QUALITY, optimize=True)
+    return os.path.getsize(src_path), os.path.getsize(dst_path), new_width, new_height
 
 
 def main():
@@ -42,7 +49,7 @@ def main():
         print('No se encontraron archivos .jpg en ' + src_dir)
         sys.exit(1)
 
-    print('Procesando %d archivos (calidad JPEG %d, resolucion original sin cambios)...' % (len(files), JPEG_QUALITY))
+    print('Procesando %d archivos (escala %.10f, calidad JPEG %d)...' % (len(files), SCALE_FACTOR, JPEG_QUALITY))
     print()
 
     total_original = 0
@@ -53,14 +60,15 @@ def main():
         src_path = os.path.join(src_dir, name)
         dst_path = os.path.join(dst_dir, name)
         try:
-            orig_size, new_size = compress_one(src_path, dst_path)
+            orig_size, new_size, w, h = compress_one(src_path, dst_path)
             total_original += orig_size
             total_new += new_size
+            print('  %s: %dx%d px, %d bytes (original: %d bytes)' % (name, w, h, new_size, orig_size))
         except Exception as err:
             errores.append((name, str(err)))
 
         if i % 50 == 0 or i == len(files):
-            print('  %d/%d procesados...' % (i, len(files)))
+            print('  ... %d/%d procesados' % (i, len(files)))
 
     print()
     print('Listo.')
