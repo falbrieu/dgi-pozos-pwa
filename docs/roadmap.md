@@ -20,15 +20,18 @@ Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` d
 **Rate limiting: NO forma parte de V1.0.** Decisión explícita y ratificada (2026-08-27): no se implementa `RateLimiter.js`, no hay contadores en `CacheService`, no se emite `RATE_LIMITED`. Queda únicamente como mejora opcional para una V1.x futura — no es un pendiente de `v1.0.0` ni bloquea el tag.
 
 **Frontend:**
-- ✅ Máquina de estados completa (8 estados), sin restos de la UI de diagnóstico de V0.
-- ✅ `manifest.json` + `sw.js` (app shell).
+- ✅ Máquina de estados completa (8 estados, incluida pantalla de "sin conexión" en el arranque), sin restos de la UI de diagnóstico de V0.
+- ✅ `manifest.json` + `sw.js` (app shell, estrategia network-first con fallback a cache, offline verificado en dispositivo real).
 - ✅ Validación/normalización de `wellId` sin ambigüedad + rango de departamento 01-19 (frontend y backend) — corrige bugs detectados en pruebas de campo (`112`→ambiguo, `000012`→departamento inválido, etc.), ver `docs/architecture.md`.
-- ✅ Enmascarado de input consistente en Android/iPhone.
+- ✅ Enmascarado de input consistente en Android/iPhone, con preservación de la posición del cursor.
 - ✅ Google Identity Services con init programático — corrige el prompt de "One Tap" apareciendo aun con sesión ya recuperada.
-- Tests Jest para `wellIdValidator` (41 casos, incluyendo los bugs reportados en pruebas de campo). Pendiente: tests de `AuthService`/`ProfileService`.
 - ✅ Botón de limpiar (`×`) en el input, botón "Guardar/Compartir" en iOS (Web Share API con fallback), UX de arranque medida y validada (~1.3-2.2s según plataforma).
 
-No se pasa a V1.1 hasta que V1 se declare estable con los 21 criterios de aceptación verificados.
+**Tests: completo.** 76 tests (Jest) — `wellIdValidator` (41), `sw.js`/lista de archivos cacheados (9), `AuthService` (15), `ProfileService`/`Api.handleGetProfile` (11).
+
+**Documentación: completa.** `README.md` actualizado para V1 (antes describía V0), `CHANGELOG.md` creado, este roadmap y `docs/architecture.md` al día.
+
+No se pasa a V1.1 hasta que V1 se declare estable con los 21 criterios de aceptación verificados (checklist en `docs/architecture.md` antes de taggear `v1.0.0`).
 
 ## V1.1 — Historial visible
 

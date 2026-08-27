@@ -1,0 +1,31 @@
+# Changelog
+
+Formato basado en [Keep a Changelog](https://keepachangelog.com/) y [SemVer](https://semver.org/). Sin tags todavía — este archivo empieza a llevarse recién ahora, al cierre de V1; el detalle completo de cómo se llegó hasta acá está en el historial de commits y en `docs/architecture.md`/`docs/roadmap.md`.
+
+## [Unreleased] — preparando v1.0.0
+
+### Agregado
+- Login con Google Identity Services (init programático, sin prompt redundante) + sesión propia firmada (HMAC-SHA256, 12h) validada localmente sin volver a llamar a Google en cada request.
+- Recuperación automática de sesión al reabrir la PWA.
+- Allowlist de usuarios activos (hoja "Usuarios"), con cache de 5 minutos.
+- Historial de auditoría de `login`/`getProfile` (hoja "Historial"), sin UI visible todavía.
+- Búsqueda de pozo `DD-PPPP` con normalización sin ambigüedad y validación de rango de departamento (01-19), duplicada en frontend y backend.
+- Visualización del perfil y descarga (Android/PC: descarga directa; iOS: hoja de compartir nativa vía Web Share API, con fallback).
+- Máquina de estados de UI completa: cargando sesión, no autenticado, listo, buscando, encontrado, no encontrado, usuario deshabilitado, sin conexión.
+- PWA instalable con Service Worker (estrategia network-first con fallback a cache), funcional offline para el app shell.
+- 76 tests (Jest) cubriendo validación de `wellId`, `AuthService`, `ProfileService`/`Api.handleGetProfile`, y la lista de archivos cacheados por el Service Worker.
+
+### Corregido
+- Persistencia de sesión en iOS standalone (el problema real era que el frontend nunca revisaba `localStorage` al arrancar, no un límite de iOS).
+- Prompt de Google apareciendo encima de una sesión ya recuperada (init de Google Identity Services pasó de declarativo a programático).
+- Enmascarado del input de pozo inconsistente entre plataformas (causado por no subir la versión de cache del Service Worker).
+- Dinosaurio de Chrome al abrir offline (el `install` del Service Worker era todo-o-nada; ahora tolera fallos individuales por archivo y maneja explícitamente la navegación).
+
+### Descartado / fuera de alcance de V1.0
+- Mecanismo de entrega de imagen vía `doGet` + `Blob` directo — no soportado por Apps Script Web Apps (confirmado con la documentación oficial).
+- Recompresión masiva del corpus de imágenes (`THUMB_WEB`) — innecesaria, los archivos reales ya son livianos.
+- Rate limiting — diseñado pero no implementado; queda como mejora opcional para una V1.x futura, no bloquea `v1.0.0`.
+
+## V0 — prueba técnica (sin tag, 2026-08-26/27)
+
+Validó de punta a punta la cadena GitHub Pages → Google Sign-In → Apps Script → sesión propia → Drive → imagen real, en Android y iPhone, antes de construir el producto. Cerrada con veredicto GO de arquitectura. Detalle completo en `docs/roadmap.md`.

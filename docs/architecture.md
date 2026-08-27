@@ -97,6 +97,36 @@ V0 inicializaba Google Sign-In de forma declarativa (`<div id="g_id_onload" data
 
 V1 usa la carpeta `THUMB` actual tal cual (no `THUMB_WEB`). No se reprocesa el corpus por ahora — los archivos reales ya son livianos (37-170 KB), muy por debajo del caso de 2.24 MB que motivó la investigación de compresión. Base64 se mantiene como mecanismo de entrega en esta etapa.
 
+## Checklist de criterios de aceptación de V1 (previo al tag `v1.0.0`)
+
+Basado en la evidencia acumulada de las pruebas manuales de cada paso (no es una sesión de regresión única de punta a punta) más los 76 tests automatizados.
+
+| # | Criterio | Estado |
+|---|---|---|
+| 1 | Abrir la app desde celular | ✅ Aprobado |
+| 2 | Instalar/agregar a inicio | ✅ Aprobado (reinstalación completa probada en iPhone) |
+| 3 | Autenticarse | ✅ Aprobado |
+| 4 | Escribir `DD-PPPP` | ✅ Aprobado (con enmascarado, PC/Android/iPhone) |
+| 5 | Encontrar el perfil si existe | ✅ Aprobado |
+| 6 | Visualizarlo | ✅ Aprobado |
+| 7 | Descargarlo | ✅ Aprobado (Android/PC descarga directa; iOS hoja de compartir nativa) |
+| 8 | Mensaje claro si no existe | ✅ Aprobado |
+| 9 | Usuario no autorizado no accede | ✅ Aprobado (`USER_DISABLED`, probado + testeado) |
+| 10 | Sin secretos visibles en frontend | ✅ Aprobado (verificado en cada commit) |
+| 11 | Funciona con la PC personal apagada | ✅ Aprobado (arquitectura 100% en la nube) |
+| 12 | No depende de PyCharm | ✅ Aprobado |
+| 13 | No depende de Telegram | ✅ Aprobado |
+| 14 | No depende de WhatsApp | ✅ Aprobado |
+| 15 | Costo mensual $0 | ✅ Aprobado (GitHub Pages + Apps Script + Drive/Sheets, todo dentro de cuotas gratuitas) |
+| 16 | Funciona en Android | ✅ Aprobado |
+| 17 | Funciona razonablemente en iPhone | ✅ Aprobado (incluido offline) |
+| 18 | Funciona en escritorio | ✅ Aprobado |
+| 19 | Tests de flujos críticos | ✅ Aprobado (76 tests, `wellIdValidator`/`AuthService`/`ProfileService`/`Api`/`sw.js`) |
+| 20 | Documentación de despliegue | ✅ Aprobado (`README.md` actualizado) |
+| 21 | Git tag/release de V1 estable | ⏳ Pendiente — es el paso siguiente, explícitamente no hecho todavía |
+
+Ningún ítem cae en "no aplica" — los 21 criterios de la especificación original son todos relevantes para V1.
+
 ## Riesgos conocidos, documentados y aceptados
 
 - Toda la infraestructura (Drive, Apps Script, Sheets) depende de cuentas de Google personales (`falbrieu@gmail.com`, `dgiperfiles@gmail.com`), no de un dominio institucional Workspace. Riesgo de continuidad institucional, fuera del alcance técnico de este proyecto.
