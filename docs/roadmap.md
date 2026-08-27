@@ -12,11 +12,12 @@ Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` d
 
 **Optimización de imágenes**: decisión tomada el 2026-08-27 — se descarta por ahora. V1 usa la carpeta `THUMB` actual tal cual (no `THUMB_WEB`), sin reprocesar el corpus, porque los archivos reales ya son livianos (37-170 KB). Queda documentado como mejora opcional/no bloqueante para más adelante si el corpus crece con archivos más pesados.
 
-**Backend (migrado en pasos, cada uno verificado en dispositivo real antes de avanzar):**
+**Backend (migrado en pasos, cada uno verificado en dispositivo real antes de avanzar) — completo:**
 1. ✅ Reestructuración en capas (`Api`/`AuthService`/`ProfileService`/`DriveProfileRepository`/`Config`), sin cambiar comportamiento.
 2. ✅ Allowlist real (`SheetUserRepository` + `USER_DISABLED`, cache de 5 min).
 3. ✅ Historial de auditoría (`SheetHistoryRepository`/`HistoryService`) para `login` y `getProfile`.
-4. Rate limiting — **diferido a V1.x, fuera del alcance de V1.0.**
+
+**Rate limiting: NO forma parte de V1.0.** Decisión explícita y ratificada (2026-08-27): no se implementa `RateLimiter.js`, no hay contadores en `CacheService`, no se emite `RATE_LIMITED`. Queda únicamente como mejora opcional para una V1.x futura — no es un pendiente de `v1.0.0` ni bloquea el tag.
 
 **Frontend:**
 - ✅ Máquina de estados completa (8 estados), sin restos de la UI de diagnóstico de V0.
@@ -24,7 +25,8 @@ Descartado explícitamente durante V0: entrega de imagen vía `doGet` + `Blob` d
 - ✅ Validación/normalización de `wellId` sin ambigüedad + rango de departamento 01-19 (frontend y backend) — corrige bugs detectados en pruebas de campo (`112`→ambiguo, `000012`→departamento inválido, etc.), ver `docs/architecture.md`.
 - ✅ Enmascarado de input consistente en Android/iPhone.
 - ✅ Google Identity Services con init programático — corrige el prompt de "One Tap" apareciendo aun con sesión ya recuperada.
-- Tests Jest para `wellIdValidator` (26 casos, incluyendo los bugs reportados). Pendiente: tests de `AuthService`/`ProfileService`.
+- Tests Jest para `wellIdValidator` (41 casos, incluyendo los bugs reportados en pruebas de campo). Pendiente: tests de `AuthService`/`ProfileService`.
+- ✅ Botón de limpiar (`×`) en el input, botón "Guardar/Compartir" en iOS (Web Share API con fallback), UX de arranque medida y validada (~1.3-2.2s según plataforma).
 
 No se pasa a V1.1 hasta que V1 se declare estable con los 21 criterios de aceptación verificados.
 

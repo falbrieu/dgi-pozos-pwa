@@ -12,7 +12,6 @@ var ERROR_MESSAGES = {
   USER_DISABLED: 'Tu cuenta no tiene acceso habilitado. Contactá al administrador.',
   PROFILE_NOT_FOUND: 'No se encontró información para el pozo {wellId}.',
   SERVICE_UNAVAILABLE: 'No se pudo completar la consulta. Intentá nuevamente.',
-  RATE_LIMITED: 'Hiciste demasiadas consultas. Esperá un momento e intentá de nuevo.',
   OFFLINE: 'No tenés conexión a internet.'
 };
 

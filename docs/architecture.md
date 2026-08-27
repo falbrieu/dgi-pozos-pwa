@@ -18,17 +18,17 @@ Usuario (celular/PC)
         |
         v
    Servicios (funciones puras, sin saber de HTTP)
-   - AuthService (sesion), ProfileService
+   - AuthService (sesion + allowlist), ProfileService, HistoryService
         |
         v
    Repositorios (unica capa que sabe de Drive/Sheets)
-   - DriveProfileRepository
+   - DriveProfileRepository, SheetUserRepository, SheetHistoryRepository
         |
         v
-   Google Drive (carpeta THUMB)
+   Google Drive (carpeta THUMB) / Google Sheets (Usuarios, Historial)
 ```
 
-Pendiente para V1: SheetUserRepository (allowlist), SheetHistoryRepository (historial), separacion de estas funciones en archivos .gs distintos (en V0 vive todo en un unico `Code.gs`, deliberadamente, por ser descartable).
+Backend ya separado en archivos (`backend/src/*.js`) — la migración desde el `Code.gs` único de V0 se completó en el paso 1 de V1.
 
 ## Decisiones confirmadas empíricamente en V0
 
@@ -56,9 +56,9 @@ Primer paso de V1 (en curso, no forma parte del cierre de V0): reducir el tamañ
 
 Se adopta **Versión A** como estándar: **recompresión JPEG a calidad 52, sin redimensionar** (cada archivo conserva su resolución nativa). Importante: en la búsqueda de A nunca hizo falta reducir resolución — la calidad 52 sola, a resolución original, ya alcanzó ese tamaño. Por eso el parámetro que se generaliza a todo el corpus es "calidad 52", no una resolución fija en píxeles (los archivos del corpus no son todos de la misma resolución nativa).
 
-Los originales de `THUMB` **no se tocan**. El corpus completo se recomprime con `scripts/batch_compress.py` hacia una carpeta nueva (`THUMB_WEB`), que luego se sube a Drive como una carpeta separada. `DriveProfileRepository` todavía no fue reapuntado a `THUMB_WEB` — eso queda para cuando el lote esté procesado y subido.
+`scripts/batch_compress.py` quedó preparado para recomprimir el corpus completo hacia una carpeta nueva (`THUMB_WEB`), sin tocar los originales de `THUMB`. **No se ejecutó**: la decisión final (ver "Fuente de imágenes" más abajo) fue no aplicarlo en V1, porque los archivos reales del corpus ya son livianos. El script queda documentado como herramienta disponible si en el futuro hiciera falta.
 
-**Contrato de errores**: `{status, code, message}`, con `debug` agregado temporalmente en V0 para diagnóstico (a eliminar antes de V1). Códigos definidos: `INVALID_WELL_ID`, `UNAUTHORIZED`, `USER_DISABLED`, `PROFILE_NOT_FOUND`, `RATE_LIMITED`, `SERVICE_UNAVAILABLE`.
+**Contrato de errores**: `{status, code, message}`. Códigos activos en V1.0: `INVALID_WELL_ID`, `UNAUTHORIZED`, `USER_DISABLED`, `PROFILE_NOT_FOUND`, `SERVICE_UNAVAILABLE`. El campo `debug` temporal de V0 ya fue eliminado. `RATE_LIMITED` está reservado en el contrato pero **no se emite en V1.0** — ver nota de rate limiting más abajo.
 
 **Configuración/secretos**: `GOOGLE_CLIENT_ID` es público por diseño (vive en el código, tanto frontend como backend). `SESSION_SECRET` y `FOLDER_ID` viven únicamente en Script Properties de Apps Script, nunca en el código fuente.
 
@@ -70,7 +70,7 @@ Los originales de `THUMB` **no se tocan**. El corpus completo se recomprime con 
 - Campo `debug` temporal eliminado de las respuestas de error.
 - Frontend reescrito con máquina de estados (cargando sesión, no autenticado, listo, buscando, encontrado, no encontrado, usuario deshabilitado, sin conexión/error), sin restos de la UI de diagnóstico de V0. `manifest.json` + `sw.js` (cachea solo el app shell).
 
-**Rate limiting**: diseñado (contador por email/hora vía `CacheService`) pero **diferido explícitamente fuera de V1.0** — decisión del 2026-08-27, queda como mejora V1.x, no bloqueante.
+**Rate limiting**: **no forma parte de V1.0** — decisión explícita del 2026-08-27, ratificada nuevamente. No existe `RateLimiter.js`, no hay contadores en `CacheService`, y el código `RATE_LIMITED` no se emite en ningún flujo. Queda solo como idea de mejora opcional para una V1.x futura (contador por email/hora vía `CacheService`), no como requisito ni pendiente de `v1.0.0`.
 
 ### Validación y normalización de `wellId` — reglas finales
 
