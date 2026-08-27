@@ -1,4 +1,21 @@
 (function () {
+  // --- Instrumentacion TEMPORAL de arranque (diagnostico, no queda en V1) ---
+  // Mide tiempos reales antes de optimizar nada. perf-debug se ve en
+  // pantalla para poder leerla en el celular sin conectar a un Mac.
+  var perfLog = [];
+  function logPerf(label) {
+    perfLog.push({ label: label, t: Math.round(performance.now()) });
+    var debugEl = document.getElementById('perf-debug');
+    if (!debugEl) {
+      return;
+    }
+    debugEl.textContent = perfLog.map(function (entry, i) {
+      var delta = i === 0 ? 0 : entry.t - perfLog[i - 1].t;
+      return entry.t + 'ms (+' + delta + 'ms)  ' + entry.label;
+    }).join('\n');
+  }
+  logPerf('app.js: inicio de ejecucion');
+
   var GOOGLE_CLIENT_ID = '970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com';
 
   var sessionToken = null;
@@ -35,6 +52,7 @@
   var shouldInitGoogleSignIn = false;
 
   window.onGsiLoaded = function () {
+    logPerf('GIS: script cargado (onload)');
     gsiLoaded = true;
     tryInitGoogleSignIn();
   };
@@ -50,6 +68,7 @@
     });
     google.accounts.id.renderButton(document.getElementById('google-signin-button'), { type: 'standard' });
     google.accounts.id.prompt();
+    logPerf('GIS: initialize + renderButton + prompt completado');
   }
 
   function goToLogin() {
@@ -69,16 +88,60 @@
     resultArea.innerHTML = '<p class="status">Buscando ' + wellId + '...</p>';
   }
 
+  function base64ToFile(base64, mimeType, filename) {
+    var byteChars = atob(base64);
+    var byteNumbers = new Array(byteChars.length);
+    for (var i = 0; i < byteChars.length; i++) {
+      byteNumbers[i] = byteChars.charCodeAt(i);
+    }
+    return new File([new Uint8Array(byteNumbers)], filename, { type: mimeType });
+  }
+
+  // iOS no ofrece <a download> de forma confiable para imagenes: Safari
+  // tiende a abrirla en vez de guardarla. En vez de depender solo del
+  // gesto de mantener presionado, el boton dispara el share sheet nativo
+  // (Web Share API con archivos, soportado desde iOS 15), que incluye
+  // "Guardar en Fotos". Si el dispositivo no lo soporta, el fallback es
+  // abrir la imagen en una pestana nueva, donde Safari si ofrece su
+  // propio boton de compartir/guardar sobre la imagen ya abierta.
+  async function handleSaveImageIOS(wellId, mimeType, imageBase64, dataUri) {
+    var file = base64ToFile(imageBase64, mimeType, wellId + '.jpg');
+    var supportsFileShare = false;
+    try {
+      supportsFileShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+    } catch (err) {
+      supportsFileShare = false;
+    }
+
+    if (supportsFileShare) {
+      try {
+        await navigator.share({ files: [file], title: 'Perfil ' + wellId });
+      } catch (err) {
+        // Cancelado por el usuario u otro error del share sheet: no es
+        // un error de la app, no hacemos nada mas.
+      }
+      return;
+    }
+
+    window.open(dataUri, '_blank');
+  }
+
   function renderFound(wellId, mimeType, imageBase64) {
     var dataUri = 'data:' + mimeType + ';base64,' + imageBase64;
     var html = '<p class="status success">Perfil encontrado</p>';
     html += '<img class="profile-image" src="' + dataUri + '" alt="Perfil del pozo ' + wellId + '" />';
     if (isIOS()) {
-      html += '<p class="hint">Mantené presionada la imagen para guardarla.</p>';
+      html += '<button type="button" id="btn-save-image" class="button">Guardar / Compartir</button>';
     } else {
       html += '<a class="button" href="' + dataUri + '" download="' + wellId + '.jpg">Descargar</a>';
     }
     resultArea.innerHTML = html;
+
+    if (isIOS()) {
+      document.getElementById('btn-save-image').addEventListener('click', function () {
+        handleSaveImageIOS(wellId, mimeType, imageBase64, dataUri);
+      });
+    }
   }
 
   function renderMessage(text) {
@@ -204,23 +267,34 @@
   // --- Recuperacion de sesion al cargar ---
   function init() {
     var stored = localStorage.getItem('sessionToken');
+    logPerf('localStorage leido (token ' + (stored ? 'presente' : 'ausente') + ')');
+
     if (!stored) {
       goToLogin();
+      logPerf('UI usable (pantalla: login, sin checkSession)');
       return;
     }
+
+    logPerf('checkSession: request enviado');
     apiCheckSession(stored).then(function (result) {
+      logPerf('checkSession: respuesta recibida (' + result.status + (result.code ? ' ' + result.code : '') + ')');
       if (result.status === 'ok') {
         sessionToken = stored;
         currentEmail = result.data.email;
         enterMain();
+        logPerf('UI usable (pantalla: main)');
       } else if (result.code === 'USER_DISABLED') {
         showScreen('disabled');
+        logPerf('UI usable (pantalla: disabled)');
       } else {
         localStorage.removeItem('sessionToken');
         goToLogin();
+        logPerf('UI usable (pantalla: login, sesion invalida)');
       }
     }).catch(function () {
+      logPerf('checkSession: fallo (red/servicio)');
       goToLogin();
+      logPerf('UI usable (pantalla: login, checkSession fallo)');
     });
   }
 
