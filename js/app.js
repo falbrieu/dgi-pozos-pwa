@@ -1,21 +1,4 @@
 (function () {
-  // --- Instrumentacion TEMPORAL de arranque (diagnostico, no queda en V1) ---
-  // Mide tiempos reales antes de optimizar nada. perf-debug se ve en
-  // pantalla para poder leerla en el celular sin conectar a un Mac.
-  var perfLog = [];
-  function logPerf(label) {
-    perfLog.push({ label: label, t: Math.round(performance.now()) });
-    var debugEl = document.getElementById('perf-debug');
-    if (!debugEl) {
-      return;
-    }
-    debugEl.textContent = perfLog.map(function (entry, i) {
-      var delta = i === 0 ? 0 : entry.t - perfLog[i - 1].t;
-      return entry.t + 'ms (+' + delta + 'ms)  ' + entry.label;
-    }).join('\n');
-  }
-  logPerf('app.js: inicio de ejecucion');
-
   var GOOGLE_CLIENT_ID = '970817103867-q30tnqqqcc9lhtaamqplbs28nglcj7q3.apps.googleusercontent.com';
 
   var sessionToken = null;
@@ -52,7 +35,6 @@
   var shouldInitGoogleSignIn = false;
 
   window.onGsiLoaded = function () {
-    logPerf('GIS: script cargado (onload)');
     gsiLoaded = true;
     tryInitGoogleSignIn();
   };
@@ -68,7 +50,6 @@
     });
     google.accounts.id.renderButton(document.getElementById('google-signin-button'), { type: 'standard' });
     google.accounts.id.prompt();
-    logPerf('GIS: initialize + renderButton + prompt completado');
   }
 
   function goToLogin() {
@@ -267,34 +248,24 @@
   // --- Recuperacion de sesion al cargar ---
   function init() {
     var stored = localStorage.getItem('sessionToken');
-    logPerf('localStorage leido (token ' + (stored ? 'presente' : 'ausente') + ')');
-
     if (!stored) {
       goToLogin();
-      logPerf('UI usable (pantalla: login, sin checkSession)');
       return;
     }
 
-    logPerf('checkSession: request enviado');
     apiCheckSession(stored).then(function (result) {
-      logPerf('checkSession: respuesta recibida (' + result.status + (result.code ? ' ' + result.code : '') + ')');
       if (result.status === 'ok') {
         sessionToken = stored;
         currentEmail = result.data.email;
         enterMain();
-        logPerf('UI usable (pantalla: main)');
       } else if (result.code === 'USER_DISABLED') {
         showScreen('disabled');
-        logPerf('UI usable (pantalla: disabled)');
       } else {
         localStorage.removeItem('sessionToken');
         goToLogin();
-        logPerf('UI usable (pantalla: login, sesion invalida)');
       }
     }).catch(function () {
-      logPerf('checkSession: fallo (red/servicio)');
       goToLogin();
-      logPerf('UI usable (pantalla: login, checkSession fallo)');
     });
   }
 

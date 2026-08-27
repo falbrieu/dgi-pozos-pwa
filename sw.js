@@ -5,7 +5,7 @@
 // app shell (html/css/js/manifest). Es lo unico que hace que un
 // dispositivo con el Service Worker ya instalado detecte la actualizacion
 // y deje de servir los archivos viejos desde cache.
-var CACHE_NAME = 'dgi-pozos-shell-v3';
+var CACHE_NAME = 'dgi-pozos-shell-v4';
 var SHELL_FILES = [
   './',
   './index.html',
