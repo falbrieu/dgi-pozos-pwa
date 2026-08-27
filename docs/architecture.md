@@ -132,3 +132,13 @@ Ningún ítem cae en "no aplica" — los 21 criterios de la especificación orig
 - Toda la infraestructura (Drive, Apps Script, Sheets) depende de cuentas de Google personales (`falbrieu@gmail.com`, `dgiperfiles@gmail.com`), no de un dominio institucional Workspace. Riesgo de continuidad institucional, fuera del alcance técnico de este proyecto.
 - `CacheService` no garantiza persistencia (Google puede desalojar entradas antes de tiempo); nunca debe ser la única fuente de verdad de nada crítico — ver Script CacheService quotas.
 - `tokeninfo` de Google no está pensado por Google para uso intensivo en producción (riesgo de throttling); se usa solo en el login, no en cada consulta, para minimizar ese riesgo.
+
+## Pendiente técnico menor: actualización del shell en iOS tras cambios grandes de frontend
+
+Confirmado el 2026-08-27: después del cambio visual (Acequia Refinada), una PWA ya instalada en un iPhone siguió mostrando la versión anterior hasta desinstalarla y volver a agregarla a pantalla de inicio — no era una incompatibilidad estética de iOS, era la versión vieja del shell todavía servida.
+
+**Diagnóstico (confirmado con headers HTTP reales, no una suposición):** GitHub Pages sirve `index.html`/`css/styles.css`/`js/app.js` con `Cache-Control: max-age=600`. El `fetch()` que usa `networkFirstThenCache` en `sw.js` no tiene ningún override de caché, así que aun con la estrategia "red primero" ese `fetch()` puede resolverse contra la caché HTTP nativa del navegador en vez de ir a la red real — Safari/WebKit es conocido por aplicar esto de forma más persistente que Chrome, en particular para PWAs instaladas en pantalla de inicio (modo standalone).
+
+**Arreglo identificado, no aplicado todavía (decisión explícita del usuario, 2026-08-27):** agregar `{ cache: 'no-store' }` a los `fetch()` internos de `sw.js` (tanto en `networkFirstThenCache` como en la rama `mode: 'navigate'`), para que esos requests ignoren la caché HTTP nativa sin importar la plataforma. Se descarta cache-busting por hash/querystring en los archivos del shell por reintroducir un paso manual (justo lo que se eliminó al pasar `CACHE_NAME` a un valor fijo).
+
+Queda como mejora a evaluar en una versión futura, no bloqueante — el mitigante actual (desinstalar y reinstalar la PWA) ya resuelve el caso real observado.
