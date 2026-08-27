@@ -6,7 +6,7 @@
   <title>Consulta de Pozos - DGI</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <meta name="theme-color" content="#0b5394">
+  <meta name="theme-color" content="#0b5a7a">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
@@ -16,8 +16,12 @@
   </div>
 
   <div id="screen-login" class="screen" hidden>
+    <div class="logo-mark logo-mark-lg" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 3C12 3 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 3 12 3Z" stroke="currentColor" stroke-width="1.6"/></svg>
+    </div>
+    <p class="eyebrow">Departamento General de Irrigación</p>
     <h1>Consulta de Pozos</h1>
-    <p class="subtitle">Departamento General de Irrigación</p>
+    <p class="subtitle">Ingresá con tu cuenta institucional</p>
 
     <div id="google-signin-button"></div>
 
@@ -26,13 +30,18 @@
 
   <div id="screen-main" class="screen" hidden>
     <header>
+      <div class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3C12 3 5 11 5 15.5C5 19.09 8.13 22 12 22C15.87 22 19 19.09 19 15.5C19 11 12 3 12 3Z" stroke="currentColor" stroke-width="2"/></svg>
+      </div>
+      <span class="app-name">Consulta de Pozos</span>
       <span id="user-email"></span>
-      <button id="btn-logout" class="button-secondary">Cerrar sesión</button>
+      <button id="btn-logout" class="button-link">Salir</button>
     </header>
 
+    <p class="search-label">Número de pozo</p>
     <form id="search-form">
       <div class="input-wrapper">
-        <input id="input-well-id" type="text" placeholder="03-0123" inputmode="numeric" autocomplete="off" />
+        <input id="input-well-id" type="text" placeholder="DD-PPPP" inputmode="numeric" autocomplete="off" />
         <button type="button" id="btn-clear-well-id" class="clear-button" aria-label="Limpiar pozo" hidden>&times;</button>
       </div>
       <button type="submit">Buscar</button>
@@ -48,6 +57,9 @@
   </div>
 
   <div id="screen-offline" class="screen" hidden>
+    <div class="offline-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 8.5C7 5 17 5 21 8.5M6.5 12C9 10 15 10 17.5 12M9.5 15.5C10.7 14.6 13.3 14.6 14.5 15.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 4L20 20" stroke="var(--color-accent)" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </div>
     <p id="offline-message">No tenés conexión a internet.</p>
     <button type="button" id="btn-retry-offline" class="button-secondary">Reintentar</button>
   </div>

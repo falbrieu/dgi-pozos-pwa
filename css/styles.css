@@ -1,11 +1,15 @@
 :root {
-  --color-primary: #0b5394;
-  --color-primary-dark: #073763;
-  --color-text: #1a1a1a;
+  --color-primary: #0b5a7a;
+  --color-primary-dark: #073e54;
+  --color-primary-tint: #eaf3f6;
+  --color-accent: #b8632f;
+  --color-accent-tint: #fbeee5;
+  --color-text: #16212a;
+  --color-text-soft: #5b6b74;
   --color-error: #b3261e;
-  --color-success: #1e6b3c;
-  --color-border: #d0d5da;
-  --color-bg: #f5f7f9;
+  --color-border: #e1e6e9;
+  --color-bg: #f7f9fa;
+  --color-surface: #ffffff;
 }
 
 * {
@@ -29,31 +33,104 @@ body {
   max-width: 420px;
 }
 
+/* --- Marca / slot de logo (reemplazar por el isologo oficial cuando este) --- */
+.logo-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.logo-mark svg { width: 15px; height: 15px; }
+
+.logo-mark-lg {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  margin: 8px auto 18px;
+}
+.logo-mark-lg svg { width: 32px; height: 32px; }
+
+/* --- Login --- */
+.eyebrow {
+  margin: 0;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+}
+
 h1 {
-  font-size: 1.4rem;
-  margin: 0 0 4px;
-  color: var(--color-primary-dark);
+  font-size: 1.5rem;
+  margin: 6px 0 4px;
+  text-align: center;
+  color: var(--color-text);
 }
 
 .subtitle {
-  margin: 0 0 24px;
-  color: #444;
-  font-size: 0.95rem;
+  margin: 0 0 28px;
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+  text-align: center;
 }
 
+/* --- Header compacto de la pantalla principal --- */
 header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  font-size: 0.85rem;
-  color: #444;
+  gap: 8px;
+  margin-bottom: 22px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-text);
+  flex: 1;
+}
+
+#user-email {
+  font-size: 0.72rem;
+  color: var(--color-text-soft);
+}
+
+.button-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 4px 0 4px 10px;
+  cursor: pointer;
+}
+.button-link:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+/* --- Buscador: el elemento principal de la pantalla --- */
+.search-label {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--color-text-soft);
 }
 
 #search-form {
   display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
+  align-items: stretch;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .input-wrapper {
@@ -63,24 +140,34 @@ header {
 
 input[type="text"] {
   width: 100%;
-  padding: 12px 36px 12px 12px;
-  font-size: 1.1rem;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  height: 52px;
+  padding: 0 40px 0 14px;
+  font-size: 1.15rem;
+  font-family: "SFMono-Regular", ui-monospace, "IBM Plex Mono", Menlo, Consolas, monospace;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 2px solid var(--color-primary);
+  border-radius: 10px;
   text-align: center;
+}
+
+input[type="text"]::placeholder {
+  color: #a9b6bd;
+  font-weight: 500;
 }
 
 .clear-button {
   position: absolute;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   width: 28px;
   height: 28px;
   line-height: 26px;
   text-align: center;
-  background: transparent;
-  color: #666;
+  background: var(--color-border);
+  color: var(--color-text-soft);
   border: none;
   border-radius: 50%;
   font-size: 1.2rem;
@@ -89,22 +176,32 @@ input[type="text"] {
 }
 
 .clear-button:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #333;
+  background: #d3dade;
+  color: var(--color-text);
 }
 
+/* --- Botones: evidentes, tamaño tactil comodo, sin sombras --- */
 button,
 .button {
-  padding: 12px 18px;
+  min-height: 52px;
+  padding: 12px 20px;
   font-size: 1rem;
+  font-weight: 700;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--color-primary);
   color: #fff;
   cursor: pointer;
   text-decoration: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+}
+
+#search-form button[type="submit"] {
+  flex: none;
+  min-width: 96px;
 }
 
 button:hover,
@@ -115,7 +212,11 @@ button:hover,
 .button-secondary {
   background: transparent;
   color: var(--color-primary);
-  border: 1px solid var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  min-height: 48px;
+}
+.button-secondary:hover {
+  background: var(--color-primary-tint);
 }
 
 .error-message {
@@ -126,30 +227,103 @@ button:hover,
 
 .status {
   font-size: 1rem;
-  margin: 12px 0;
+  margin: 14px 0;
 }
 
 .status.error {
   color: var(--color-error);
 }
 
+/* "Perfil encontrado": discreto a proposito para no competir con la
+   imagen - una marca chica en vez de un titulo grande. */
 .status.success {
-  color: var(--color-success);
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-text-soft);
+  font-weight: 700;
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.status.success::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  flex: none;
 }
 
 .hint {
-  color: #555;
+  color: var(--color-text-soft);
   font-size: 0.85rem;
 }
 
 .profile-image {
   max-width: 100%;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--color-border);
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  display: block;
 }
 
 #result-area .button {
+  width: 100%;
   margin-top: 8px;
+}
+
+/* --- Estado "no encontrado": tarjeta simple con el acento terracota --- */
+.empty-state {
+  margin-top: 16px;
+  text-align: center;
+  padding: 26px 16px;
+  background: var(--color-accent-tint);
+  border-radius: 10px;
+}
+.empty-state-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  margin: 0 auto 12px;
+  border: 2px solid var(--color-accent);
+  color: var(--color-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.empty-state-icon svg { width: 16px; height: 16px; }
+.empty-state-title {
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--color-text);
+  margin: 0 0 4px;
+}
+.empty-state-text {
+  font-size: 0.78rem;
+  color: var(--color-text-soft);
+  margin: 0;
+}
+
+/* --- Sin conexion --- */
+#screen-offline {
+  text-align: center;
+  padding-top: 40px;
+}
+.offline-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 18px;
+  background: var(--color-primary-tint);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.offline-icon svg { width: 28px; height: 28px; }
+#offline-message {
+  color: var(--color-text-soft);
+  font-size: 0.92rem;
+  margin: 0 0 22px;
 }

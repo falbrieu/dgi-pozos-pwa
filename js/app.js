@@ -112,10 +112,13 @@
     var dataUri = 'data:' + mimeType + ';base64,' + imageBase64;
     var html = '<p class="status success">Perfil encontrado</p>';
     html += '<img class="profile-image" src="' + dataUri + '" alt="Perfil del pozo ' + wellId + '" />';
+    // Mismo texto en todas las plataformas a proposito (Guardar / Compartir),
+    // aunque el comportamiento real difiera: en iOS dispara el share sheet
+    // nativo (ver handleSaveImageIOS), en el resto es una descarga directa.
     if (isIOS()) {
       html += '<button type="button" id="btn-save-image" class="button">Guardar / Compartir</button>';
     } else {
-      html += '<a class="button" href="' + dataUri + '" download="' + wellId + '.jpg">Descargar</a>';
+      html += '<a class="button" href="' + dataUri + '" download="' + wellId + '.jpg">Guardar / Compartir</a>';
     }
     resultArea.innerHTML = html;
 
@@ -128,6 +131,17 @@
 
   function renderMessage(text) {
     resultArea.innerHTML = '<p class="status error">' + text + '</p>';
+  }
+
+  // Mismo caso (PROFILE_NOT_FOUND) que antes, solo cambia el marcado: una
+  // tarjeta simple en vez de una linea de texto suelta.
+  function renderNotFound(wellId) {
+    var html = '<div class="empty-state">';
+    html += '<div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>';
+    html += '<p class="empty-state-title">No se encontró información</p>';
+    html += '<p class="empty-state-text">para el pozo ' + wellId + '. Revisá el número e intentá de nuevo.</p>';
+    html += '</div>';
+    resultArea.innerHTML = html;
   }
 
   // --- Login ---
@@ -237,7 +251,7 @@
       } else if (result.code === 'UNAUTHORIZED') {
         logout();
       } else if (result.code === 'PROFILE_NOT_FOUND') {
-        renderMessage(getErrorMessage('PROFILE_NOT_FOUND', normalized));
+        renderNotFound(normalized);
       } else {
         renderMessage(getErrorMessage(result.code));
       }
