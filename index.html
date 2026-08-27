@@ -31,7 +31,10 @@
     </header>
 
     <form id="search-form">
-      <input id="input-well-id" type="text" placeholder="03-0123" inputmode="numeric" autocomplete="off" />
+      <div class="input-wrapper">
+        <input id="input-well-id" type="text" placeholder="03-0123" inputmode="numeric" autocomplete="off" />
+        <button type="button" id="btn-clear-well-id" class="clear-button" aria-label="Limpiar pozo" hidden>&times;</button>
+      </div>
       <button type="submit">Buscar</button>
     </form>
     <p id="input-error" class="error-message" hidden></p>

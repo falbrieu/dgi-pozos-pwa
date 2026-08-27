@@ -133,6 +133,11 @@
   var form = document.getElementById('search-form');
   var input = document.getElementById('input-well-id');
   var inputError = document.getElementById('input-error');
+  var btnClear = document.getElementById('btn-clear-well-id');
+
+  function updateClearButtonVisibility() {
+    btnClear.hidden = input.value.length === 0;
+  }
 
   // Enmascarado en vivo: solo digitos, guion automatico despues del
   // segundo digito, maximo 6 digitos reales. Preserva la posicion logica
@@ -147,6 +152,7 @@
     input.value = formatted;
     var newPos = positionAfterNDigits(formatted, digitsBeforeCursor);
     input.setSelectionRange(newPos, newPos);
+    updateClearButtonVisibility();
   });
 
   input.addEventListener('paste', function (event) {
@@ -154,6 +160,14 @@
     var pasted = (event.clipboardData || window.clipboardData).getData('text');
     var normalizado = normalizeWellId(pasted);
     input.value = isValidWellId(normalizado) ? normalizado : formatWellIdInput(pasted);
+    updateClearButtonVisibility();
+  });
+
+  btnClear.addEventListener('click', function () {
+    input.value = '';
+    updateClearButtonVisibility();
+    inputError.hidden = true;
+    input.focus();
   });
 
   form.addEventListener('submit', function (event) {
