@@ -21,8 +21,7 @@ function doPost(e) {
       }
     }
   } catch (err) {
-    // TEMPORAL, solo V0/debug: se saca en un paso posterior de V1.
-    response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString(), debug: String(err) };
+    response = { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString() };
   }
 
   return ContentService
@@ -52,8 +51,7 @@ function handleGetProfile(sessionToken, wellId) {
     profile = profileService_getProfile(wellId);
   } catch (err) {
     logHistoryEvent(session.email, 'getProfile', wellId, 'SERVICE_UNAVAILABLE');
-    // TEMPORAL, solo V0/debug: se saca en un paso posterior de V1.
-    return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString(), debug: String(err) };
+    return { status: 'error', code: 'SERVICE_UNAVAILABLE', message: err.toString() };
   }
   var elapsedMs = Date.now() - startTime;
 
