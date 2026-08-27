@@ -86,3 +86,7 @@ function handleGetProfile(sessionToken, wellId) {
     }
   };
 }
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { doPost, handleGetProfile };
+}

@@ -126,5 +126,5 @@ function handleLogin(idToken) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { signPayload, createSessionToken, verifySessionToken, handleCheckSession, handleLogin };
+  module.exports = { isUserActive, signPayload, createSessionToken, verifySessionToken, handleCheckSession, handleLogin };
 }

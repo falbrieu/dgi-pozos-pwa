@@ -1,0 +1,97 @@
+const { installAppsScriptFakes } = require('./appsScriptFakes');
+const Api = require('../src/Api');
+
+// Api.js no declara verifySessionToken/isUserActive/logHistoryEvent/
+// profileService_getProfile - en Apps Script real vienen del scope
+// global compartido con AuthService.js/HistoryService.js/ProfileService.js.
+// Aca se fakean por completo, para testear unicamente la logica de
+// handleGetProfile (formato/rango de wellId, mapeo de resultados a
+// codigos), sin tocar Google/Drive/Sheets.
+beforeEach(() => {
+  installAppsScriptFakes();
+});
+
+function mockValidSession(email) {
+  global.verifySessionToken.mockReturnValue({ valid: true, email: email || 'user@example.com' });
+  global.isUserActive.mockReturnValue(true);
+}
+
+describe('handleGetProfile', () => {
+  test('sessionToken invalido: UNAUTHORIZED', () => {
+    global.verifySessionToken.mockReturnValue({ valid: false, reason: 'expirado' });
+
+    const result = Api.handleGetProfile('token-vencido', '03-0123');
+
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('UNAUTHORIZED');
+  });
+
+  test('usuario deshabilitado: USER_DISABLED', () => {
+    global.verifySessionToken.mockReturnValue({ valid: true, email: 'user@example.com' });
+    global.isUserActive.mockReturnValue(false);
+
+    const result = Api.handleGetProfile('token-valido', '03-0123');
+
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('USER_DISABLED');
+  });
+
+  test('formato invalido (letras): INVALID_WELL_ID', () => {
+    mockValidSession();
+    const result = Api.handleGetProfile('token-valido', '03-ABC');
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('INVALID_WELL_ID');
+  });
+
+  test('departamento fuera de rango por arriba (20): INVALID_WELL_ID, no consulta Drive', () => {
+    mockValidSession();
+    const result = Api.handleGetProfile('token-valido', '20-0123');
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('INVALID_WELL_ID');
+    expect(global.profileService_getProfile).not.toHaveBeenCalled();
+  });
+
+  test('departamento fuera de rango por abajo (00): INVALID_WELL_ID, no consulta Drive', () => {
+    mockValidSession();
+    const result = Api.handleGetProfile('token-valido', '00-0123');
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('INVALID_WELL_ID');
+    expect(global.profileService_getProfile).not.toHaveBeenCalled();
+  });
+
+  test('pozo valido existente: OK con imagen en base64', () => {
+    mockValidSession();
+    const fakeBlob = { getBytes: () => [1, 2, 3], getContentType: () => 'image/jpeg' };
+    global.profileService_getProfile.mockReturnValue({ found: true, blob: fakeBlob });
+
+    const result = Api.handleGetProfile('token-valido', '03-0123');
+
+    expect(result.status).toBe('ok');
+    expect(result.data.wellId).toBe('03-0123');
+    expect(result.data.mimeType).toBe('image/jpeg');
+    expect(typeof result.data.imageBase64).toBe('string');
+    expect(result.data.originalSizeBytes).toBe(3);
+  });
+
+  test('pozo bien formado pero inexistente: PROFILE_NOT_FOUND', () => {
+    mockValidSession();
+    global.profileService_getProfile.mockReturnValue({ found: false });
+
+    const result = Api.handleGetProfile('token-valido', '19-9999');
+
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('PROFILE_NOT_FOUND');
+  });
+
+  test('error de repositorio/Drive al buscar: SERVICE_UNAVAILABLE', () => {
+    mockValidSession();
+    global.profileService_getProfile.mockImplementation(() => {
+      throw new Error('Drive no disponible');
+    });
+
+    const result = Api.handleGetProfile('token-valido', '03-0123');
+
+    expect(result.status).toBe('error');
+    expect(result.code).toBe('SERVICE_UNAVAILABLE');
+  });
+});
