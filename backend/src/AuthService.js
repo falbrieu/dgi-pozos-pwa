@@ -5,6 +5,26 @@
 // como estaba en V0. Sube a 12 horas en un paso posterior, explicito.
 var SESSION_TTL_SECONDS = 1800;
 
+// Cuanto tiempo, como maximo, puede tardar en notarse que alguien fue
+// deshabilitado en la hoja "Usuarios" (evita golpear Sheets en cada
+// request; CacheService puede desalojar antes, nunca despues).
+var USER_STATUS_CACHE_SECONDS = 300;
+
+function isUserActive(email) {
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'user_active_' + String(email).trim().toLowerCase();
+
+  var cached = cache.get(cacheKey);
+  if (cached !== null) {
+    return cached === 'true';
+  }
+
+  var status = sheetUserRepository_getUserStatus(email);
+  var active = status.found && status.active;
+  cache.put(cacheKey, active ? 'true' : 'false', USER_STATUS_CACHE_SECONDS);
+  return active;
+}
+
 function signPayload(payloadB64) {
   var rawSignature = Utilities.computeHmacSha256Signature(payloadB64, getSessionSecret());
   return Utilities.base64EncodeWebSafe(rawSignature);
@@ -52,6 +72,9 @@ function handleCheckSession(sessionToken) {
   if (!result.valid) {
     return { status: 'error', code: 'UNAUTHORIZED', message: 'sessionToken invalido: ' + result.reason };
   }
+  if (!isUserActive(result.email)) {
+    return { status: 'error', code: 'USER_DISABLED', message: 'usuario no habilitado: ' + result.email };
+  }
   return {
     status: 'ok',
     data: { email: result.email, message: 'sesion validada localmente, sin llamar a Google' }
@@ -79,6 +102,10 @@ function handleLogin(idToken) {
 
   if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {
     return { status: 'error', code: 'UNAUTHORIZED', message: 'aud no coincide con nuestro client id' };
+  }
+
+  if (!isUserActive(tokenInfo.email)) {
+    return { status: 'error', code: 'USER_DISABLED', message: 'usuario no habilitado: ' + tokenInfo.email };
   }
 
   return {

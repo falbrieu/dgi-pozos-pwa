@@ -19,6 +19,14 @@ function getFolderId() {
   return folderId;
 }
 
+function getSpreadsheetId() {
+  var spreadsheetId = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID');
+  if (!spreadsheetId) {
+    throw new Error('SPREADSHEET_ID no configurado en Script Properties');
+  }
+  return spreadsheetId;
+}
+
 // Correr esta funcion UNA VEZ manualmente desde el editor de Apps Script
 // (Ejecutar > setupSessionSecret) para generar y guardar el secreto HMAC.
 // No sobreescribe un secreto ya existente.

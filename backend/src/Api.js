@@ -36,6 +36,10 @@ function handleGetProfile(sessionToken, wellId) {
     return { status: 'error', code: 'UNAUTHORIZED', message: 'sessionToken invalido: ' + session.reason };
   }
 
+  if (!isUserActive(session.email)) {
+    return { status: 'error', code: 'USER_DISABLED', message: 'usuario no habilitado: ' + session.email };
+  }
+
   if (!wellId || !/^\d{2}-\d{4}$/.test(wellId)) {
     return { status: 'error', code: 'INVALID_WELL_ID', message: 'formato invalido: ' + wellId };
   }
